@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --cream:      #FFF8F0;
+    --warm-bg:    #FFF2E4;
+    --card:       #FFFFFF;
+    --orange:     #FF7A3D;
+    --orange-dk:  #E5692E;
+    --orange-lt:  #FFE5D6;
+    --peach:      #FFBFA0;
+    --teal:       #3DBFB8;
+    --teal-lt:    #D6F4F3;
+    --yellow:     #FFD166;
+    --yellow-lt:  #FFF5D6;
+    --pink:       #FF6B9D;
+    --pink-lt:    #FFE0EE;
+    --purple:     #9B72CF;
+    --purple-lt:  #EDE4F8;
+    --green:      #4CAF82;
+    --green-lt:   #DDF3EA;
+    --red:        #FF5252;
+    --red-lt:     #FFE5E5;
+    --blue:       #4A90D9;
+    --blue-lt:    #DDEEFF;
+    --text-dark:  #2D1B0E;
+    --text-mid:   #6B4C35;
+    --text-soft:  #A07A60;
+    --border:     #F0DFD0;
+    --radius:     18px;
+    --radius-sm:  12px;
+    --radius-xs:  8px;
+  }
+
+  * {
+    @apply border-warm-200;
+  }
+
+  body {
+    background: var(--warm-bg);
+    color: var(--text-dark);
+    font-family: 'Quicksand', system-ui, sans-serif;
+    font-weight: 600;
+    @apply antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Nunito', system-ui, sans-serif;
+    font-weight: 800;
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--warm-bg); }
+  ::-webkit-scrollbar-thumb { background: var(--peach); border-radius: 10px; }
+}
+
+@layer components {
+  /* ── Card ──────────────────────────────────────────── */
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: 0 2px 8px rgba(45,27,14,.07);
+    border: 1.5px solid var(--border);
+  }
+
+  .card-sm {
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 2px 8px rgba(45,27,14,.07);
+    border: 1.5px solid var(--border);
+  }
+
+  /* ── Nav item sidebar ───────────────────────────────── */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold
+           transition-colors duration-150 cursor-pointer w-full;
+    color: var(--text-mid);
+  }
+  .nav-item:hover {
+    background: var(--warm-bg);
+    color: var(--orange);
+  }
+  .nav-item.active {
+    background: var(--orange-lt);
+    color: var(--orange);
+  }
+
+  /* ── Table ──────────────────────────────────────────── */
+  .table-base {
+    @apply w-full text-sm;
+  }
+  .table-base thead tr {
+    background: var(--warm-bg);
+    border-bottom: 2px solid var(--border);
+  }
+  .table-base thead th {
+    @apply px-4 py-3 text-left;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    color: var(--text-soft);
+  }
+  .table-base tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .15s;
+  }
+  .table-base tbody tr:last-child {
+    border-bottom: none;
+  }
+  .table-base tbody tr:hover {
+    background: #FFFAF6;
+  }
+  .table-base tbody td {
+    @apply px-4 py-3;
+    color: var(--text-dark);
+    font-weight: 600;
+    vertical-align: middle;
+  }
+
+  /* ── Section typography ─────────────────────────────── */
+  .section-title {
+    font-family: 'Nunito', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-dark);
+  }
+  .section-subtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-soft);
+    margin-top: 2px;
+  }
+
+  /* ── Stat card ──────────────────────────────────────── */
+  .stat-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px;
+    border: 1.5px solid var(--border);
+    box-shadow: 0 2px 8px rgba(45,27,14,.07);
+    transition: all .2s;
+  }
+  .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 40px rgba(45,27,14,.13);
+  }
+}

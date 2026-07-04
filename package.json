@@ -1,0 +1,20 @@
+{
+  "name": "pet-clinic-system",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:e2e:browser": "playwright test",
+    "test:e2e:browser:ui": "playwright test --ui",
+    "test:e2e:browser:report": "playwright show-report e2e/report",
+    "test:api:e2e": "npm run test:e2e --prefix api"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  }
+}

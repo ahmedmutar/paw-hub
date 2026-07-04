@@ -1,0 +1,37 @@
+# dependencies
+node_modules/
+
+# env files (secrets — never commit)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# build output
+dist/
+build/
+.expo/
+web-build/
+
+# uploads (local dev only — production uses Railway volume)
+api/uploads/
+
+# test artifacts
+e2e/report/
+test-results/
+playwright-report/
+coverage/
+
+# logs
+*.log
+npm-debug.*
+
+# OS
+.DS_Store
+
+# editors
+.vscode/
+.idea/
+
+# typescript
+*.tsbuildinfo

@@ -1,0 +1,1750 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  superadmin
+  admin
+  dokter
+  resepsionis
+  kasir
+  karyawan
+}
+
+enum TenantStatus {
+  trial
+  active
+  suspended
+  cancelled
+}
+
+enum PlanCode {
+  free
+  starter
+  pro
+  enterprise
+}
+
+// ─── TENANT / MULTI-TENANCY ──────────────────────────────────────────────────
+
+model Tenant {
+  id          BigInt       @id @default(autoincrement())
+  name        String
+  slug        String       @unique
+  email       String       @unique
+  phoneNumber String?      @map("phone_number")
+  address     String?
+  logoUrl     String?      @map("logo_url")
+  status      TenantStatus @default(trial)
+  trialEndsAt DateTime?    @map("trial_ends_at")
+  isDeleted   Boolean      @default(false) @map("is_deleted")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  branches     Branch[]
+  users        User[]
+  subscription TenantSubscription?
+  invoices     BillingInvoice[]
+
+  @@map("tenants")
+}
+
+model SubscriptionPlan {
+  id           BigInt   @id @default(autoincrement())
+  code         PlanCode @unique
+  name         String
+  priceMonthly Decimal  @default(0) @map("price_monthly") @db.Decimal(15, 2)
+  priceYearly  Decimal  @default(0) @map("price_yearly") @db.Decimal(15, 2)
+  maxBranches  Int      @default(1) @map("max_branches")
+  maxUsers     Int      @default(5) @map("max_users")
+  maxPatients  Int      @default(500) @map("max_patients")
+  features     Json     @default("{}")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  subscriptions TenantSubscription[]
+  invoices      BillingInvoice[]
+
+  @@map("subscription_plans")
+}
+
+enum BillingInvoiceStatus {
+  pending
+  paid
+  failed
+  expired
+  cancelled
+}
+
+model BillingInvoice {
+  id              BigInt               @id @default(autoincrement())
+  tenantId        BigInt               @map("tenant_id")
+  planId          BigInt               @map("plan_id")
+  cycle           String               @default("monthly")
+  orderId         String               @unique @map("order_id")
+  amount          Decimal              @db.Decimal(15, 2)
+  status          BillingInvoiceStatus @default(pending)
+  snapToken       String?              @map("snap_token")
+  paymentType     String?              @map("payment_type")
+  paidAt          DateTime?            @map("paid_at")
+  rawNotification Json?                @map("raw_notification")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+
+  tenant Tenant           @relation(fields: [tenantId], references: [id])
+  plan   SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@map("billing_invoices")
+}
+
+model TenantSubscription {
+  id          BigInt    @id @default(autoincrement())
+  tenantId    BigInt    @unique @map("tenant_id")
+  planId      BigInt    @map("plan_id")
+  cycle       String    @default("monthly")
+  status      String    @default("trial")
+  startedAt   DateTime  @default(now()) @map("started_at")
+  expiresAt   DateTime? @map("expires_at")
+  cancelledAt DateTime? @map("cancelled_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant           @relation(fields: [tenantId], references: [id])
+  plan   SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@map("tenant_subscriptions")
+}
+
+enum AcceptanceStatus {
+  pending
+  accepted
+  declined
+  cancelled
+}
+
+enum StockMovementStatus {
+  masuk
+  keluar
+  adjustment
+}
+
+// ─── MASTER DATA ─────────────────────────────────────────────────────────────
+
+model Branch {
+  id                 BigInt    @id @default(autoincrement())
+  tenantId           BigInt?   @map("tenant_id")
+  branchCode         String    @unique @map("branch_code")
+  branchName         String    @map("branch_name")
+  address            String?
+  phoneNumber        String?   @map("phone_number")
+  email              String?
+  operatingHours     String?   @map("operating_hours")
+  paymentInstruction String?   @map("payment_instruction")
+  isActive           Boolean   @default(true) @map("is_active")
+  isDeleted          Boolean   @default(false) @map("is_deleted")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  tenant                  Tenant?  @relation(fields: [tenantId], references: [id])
+  users                   User[]
+  owners                  Owner[]
+  patients                Patient[]
+  categoryItems           CategoryItem[]
+  unitItems               UnitItem[]
+  listOfItems             ListOfItem[]
+  listOfItemPetShops      ListOfItemPetShop[]
+  serviceCategories       ServiceCategory[]
+  listOfServices          ListOfService[]
+  medicineGroups          MedicineGroup[]
+  masterPaymentPetshops   MasterPaymentPetshop[]
+  registrations           Registration[]
+  inPatients              InPatient[]
+  expenses                Expense[]
+  payrolls                Payroll[]
+  waLogs                  WhatsappLog[]
+  appointments            Appointment[]
+  groomingPackages        GroomingPackage[]
+  groomingSessions        GroomingSession[]
+  broadcastLogs           BroadcastLog[]
+  loyaltyConfig           LoyaltyConfig?
+  loyaltyPoints           LoyaltyPoint[]
+  loyaltyMembers          LoyaltyMember[]
+  reviewRecords           ReviewRecord[]
+  doctorSchedules         DoctorSchedule[]
+  doctorLeaves            DoctorLeave[]
+  hotelRooms              HotelRoom[]
+  hotelBookings           HotelBooking[]
+  telemedSessions         TelemedSession[]
+  labRequests             LabRequest[]
+  marketplaceIntegrations MarketplaceIntegration[]
+  staffNotifications      StaffNotification[]
+
+  @@map("branches")
+}
+
+model User {
+  id              BigInt    @id @default(autoincrement())
+  staffingNumber  String?   @unique @map("staffing_number")
+  username        String    @unique
+  fullname        String
+  email           String?
+  password        String
+  gender          String?
+  religion        String?
+  birthPlace      String?   @map("birth_place")
+  birthdate       DateTime?
+  bloodGroup      String?   @map("blood_group")
+  idCardNumber    String?   @map("id_card_number")
+  phoneNumber     String?   @map("phone_number")
+  homeNumber      String?   @map("home_number")
+  address         String?
+  imageProfile    String?   @map("image_profile")
+  role            UserRole
+  status          Boolean   @default(true)
+  branchId        BigInt    @map("branch_id")
+  tenantId        BigInt?   @map("tenant_id")
+  ptkpStatus      String    @default("TK0") @map("ptkp_status")
+  npwp            String?
+  isDeleted       Boolean   @default(false) @map("is_deleted")
+  deletedAt       DateTime? @map("deleted_at")
+  deletedBy       String?   @map("deleted_by")
+  createdBy       String?   @map("created_by")
+  updatedBy       String?   @map("updated_by")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  branch              Branch              @relation(fields: [branchId], references: [id])
+  tenant              Tenant?             @relation(fields: [tenantId], references: [id])
+  refreshTokens       RefreshToken[]
+  registrations       Registration[]      @relation("DoctorRegistrations")
+  registrationsBy     Registration[]      @relation("StaffRegistrations")
+  acceptances         DoctorAcceptance[]
+  checkUpResults      CheckUpResult[]
+  payrolls            Payroll[]           @relation("EmployeePayrolls")
+  payrollsCreated     Payroll[]           @relation("CreatedByPayrolls")
+  expenses            Expense[]
+  paymentsPetshop     PaymentPetshop[]
+  payments            ListOfPayment[]
+  appointments        Appointment[]    @relation("DoctorAppointments")
+  groomingSessions      GroomingSession[] @relation("GroomerSessions")
+  groomingRegistrations GroomingSession[] @relation("GroomingRegistrant")
+  broadcastLogs         BroadcastLog[]
+  reviewsAsDoctor       ReviewRecord[]    @relation("DoctorReviews")
+  doctorSchedules       DoctorSchedule[]  @relation("DoctorSchedules")
+  doctorLeaves          DoctorLeave[]     @relation("DoctorLeaves")
+  leaveApprovals        DoctorLeave[]     @relation("LeaveApprovals")
+  telemedSessions       TelemedSession[]  @relation("DoctorTelemeds")
+  labRequests           LabRequest[]      @relation("DoctorLabRequests")
+  calendarSync          DoctorCalendarSync? @relation("CalendarSync")
+  hotelCareLogs         HotelCareLog[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("refresh_tokens")
+}
+
+// ─── OWNER & PATIENT ──────────────────────────────────────────────────────────
+
+model Owner {
+  id          BigInt    @id @default(autoincrement())
+  ownerName   String    @map("owner_name")
+  address     String?
+  phoneNumber String?   @map("phone_number")
+  branchId    BigInt    @map("branch_id")
+  isDeleted   Boolean   @default(false) @map("is_deleted")
+  deletedAt   DateTime? @map("deleted_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  branch   Branch      @relation(fields: [branchId], references: [id])
+  patients Patient[]
+  otps     OwnerOTP[]
+  broadcastRecipients BroadcastRecipient[]
+  loyaltyPoints       LoyaltyPoint[]
+  loyaltyMembers      LoyaltyMember[]
+  hotelBookings       HotelBooking[]
+  telemedSessions     TelemedSession[]
+
+  @@map("owners")
+}
+
+model Patient {
+  id           BigInt    @id @default(autoincrement())
+  idMember     String    @unique @map("id_member")
+  petCategory  String    @map("pet_category")
+  petName      String    @map("pet_name")
+  petGender    String?   @map("pet_gender")
+  petYearAge   Int?      @map("pet_year_age")
+  petMonthAge  Int?      @map("pet_month_age")
+  ownerId      BigInt    @map("owner_id")
+  branchId     BigInt    @map("branch_id")
+  userId       BigInt    @map("user_id")
+  isDeleted    Boolean   @default(false) @map("is_deleted")
+  deletedAt    DateTime? @map("deleted_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  owner         Owner          @relation(fields: [ownerId], references: [id])
+  branch        Branch         @relation(fields: [branchId], references: [id])
+  registrations Registration[]
+  inPatients    InPatient[]
+  medicalRecord MedicalRecord?
+  weightRecords WeightRecord[]
+  vaccinations  VaccinationRecord[]
+  dewormings    DewormingRecord[]
+  procedures    MajorProcedureRecord[]
+  waLogs           WhatsappLog[]
+  appointments     Appointment[]
+  reminderLogs     ReminderLog[]
+  groomingSessions GroomingSession[]
+  reviews          ReviewRecord[]
+  hotelBookings    HotelBooking[]
+  telemedSessions  TelemedSession[]
+  labRequests      LabRequest[]
+
+  @@map("patients")
+}
+
+// ─── REGISTRATION & ACCEPTANCE ───────────────────────────────────────────────
+
+model Registration {
+  id               BigInt    @id @default(autoincrement())
+  idNumber         String    @unique @map("id_number")
+  patientId        BigInt    @map("patient_id")
+  doctorUserId     BigInt    @map("doctor_user_id")
+  userId           BigInt    @map("user_id")
+  branchId         BigInt    @map("branch_id")
+  complaint        String
+  registrant       String
+  visitType        String    @default("baru") @map("visit_type")
+  queueNumber      Int?      @map("queue_number")
+  isPriority       Boolean   @default(false) @map("is_priority")
+  cancelReason     String?   @map("cancel_reason")
+  acceptanceStatus AcceptanceStatus @default(pending) @map("acceptance_status")
+  isHideFromDropDown Boolean  @default(false) @map("is_hide_from_drop_down")
+  isDeleted        Boolean   @default(false) @map("is_deleted")
+  deletedAt        DateTime? @map("deleted_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  patient         Patient          @relation(fields: [patientId], references: [id])
+  doctor          User             @relation("DoctorRegistrations", fields: [doctorUserId], references: [id])
+  createdBy       User             @relation("StaffRegistrations", fields: [userId], references: [id])
+  branch          Branch           @relation(fields: [branchId], references: [id])
+  doctorAcceptance DoctorAcceptance?
+  checkUpResult   CheckUpResult?
+  review          ReviewRecord?
+
+  @@map("registrations")
+}
+
+model DoctorAcceptance {
+  id             BigInt   @id @default(autoincrement())
+  registrationId BigInt   @unique @map("registration_id")
+  userId         BigInt   @map("user_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  registration Registration @relation(fields: [registrationId], references: [id])
+  doctor       User         @relation(fields: [userId], references: [id])
+
+  @@map("doctor_acceptances")
+}
+
+// ─── INPATIENT ────────────────────────────────────────────────────────────────
+
+model InPatient {
+  id               BigInt    @id @default(autoincrement())
+  idNumber         String    @unique @map("id_number")
+  patientId        BigInt    @map("patient_id")
+  doctorUserId     BigInt    @map("doctor_user_id")
+  branchId         BigInt    @map("branch_id")
+  complaint        String
+  registrant       String
+  estimateDay      Int?      @map("estimate_day")
+  realityDay       Int?      @map("reality_day")
+  acceptanceStatus AcceptanceStatus @default(pending) @map("acceptance_status")
+  isDeleted        Boolean   @default(false) @map("is_deleted")
+  deletedAt        DateTime? @map("deleted_at")
+  userId           BigInt    @map("user_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  branch  Branch  @relation(fields: [branchId], references: [id])
+
+  @@map("in_patients")
+}
+
+// ─── INVENTORY — ITEMS ───────────────────────────────────────────────────────
+
+model CategoryItem {
+  id           BigInt    @id @default(autoincrement())
+  categoryName String    @map("category_name")
+  branchId     BigInt    @map("branch_id")
+  isDeleted    Boolean   @default(false) @map("is_deleted")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  branch        Branch         @relation(fields: [branchId], references: [id])
+  listOfItems   ListOfItem[]
+
+  @@map("category_items")
+}
+
+model UnitItem {
+  id        BigInt    @id @default(autoincrement())
+  unitName  String    @map("unit_name")
+  branchId  BigInt    @map("branch_id")
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  branch      Branch       @relation(fields: [branchId], references: [id])
+  listOfItems ListOfItem[]
+
+  @@map("unit_items")
+}
+
+model ListOfItem {
+  id             BigInt    @id @default(autoincrement())
+  itemName       String    @map("item_name")
+  description    String?
+  totalItem      Decimal   @default(0) @map("total_item") @db.Decimal(10, 2)
+  limitItem      Decimal?  @map("limit_item") @db.Decimal(10, 2)
+  expiredDate    DateTime? @map("expired_date")
+  isActive       Boolean   @default(true) @map("is_active")
+  unitItemId     BigInt    @map("unit_item_id")
+  categoryItemId BigInt    @map("category_item_id")
+  branchId       BigInt    @map("branch_id")
+  isDeleted      Boolean   @default(false) @map("is_deleted")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  barcodeId          String?   @unique @map("barcode_id")
+
+  unitItem           UnitItem            @relation(fields: [unitItemId], references: [id])
+  categoryItem       CategoryItem        @relation(fields: [categoryItemId], references: [id])
+  branch             Branch              @relation(fields: [branchId], references: [id])
+  priceItems         PriceItem[]
+  stockMovements     StockMovement[]
+
+  @@map("list_of_items")
+}
+
+model PriceItem {
+  id           BigInt    @id @default(autoincrement())
+  listOfItemId BigInt    @map("list_of_items_id")
+  sellingPrice Decimal   @map("selling_price") @db.Decimal(15, 2)
+  capitalPrice Decimal   @map("capital_price") @db.Decimal(15, 2)
+  doctorFee    Decimal   @default(0) @map("doctor_fee") @db.Decimal(15, 2)
+  petshopFee   Decimal   @default(0) @map("petshop_fee") @db.Decimal(15, 2)
+  isDeleted    Boolean   @default(false) @map("is_deleted")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  listOfItem         ListOfItem          @relation(fields: [listOfItemId], references: [id])
+  detailItemPatients DetailItemPatient[]
+
+  @@map("price_items")
+}
+
+model StockMovement {
+  id           BigInt              @id @default(autoincrement())
+  listOfItemId BigInt              @map("list_of_item_id")
+  quantity     Decimal             @db.Decimal(10, 2)
+  status       StockMovementStatus
+  notes        String?
+  userId       BigInt              @map("user_id")
+  isDeleted    Boolean             @default(false) @map("is_deleted")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  listOfItem ListOfItem @relation(fields: [listOfItemId], references: [id])
+
+  @@map("stock_movements")
+}
+
+// ─── INVENTORY — PETSHOP ITEMS ────────────────────────────────────────────────
+
+model ListOfItemPetShop {
+  id             BigInt    @id @default(autoincrement())
+  itemName       String    @map("item_name")
+  totalItem      Decimal   @default(0) @map("total_item") @db.Decimal(10, 2)
+  limitItem      Decimal?  @map("limit_item") @db.Decimal(10, 2)
+  expiredDate    DateTime? @map("expired_date")
+  unitItemId     BigInt    @map("unit_item_id")
+  categoryItemId BigInt    @map("category_item_id")
+  branchId       BigInt    @map("branch_id")
+  isDeleted      Boolean   @default(false) @map("is_deleted")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  branch            Branch              @relation(fields: [branchId], references: [id])
+  priceItemPetShops PriceItemPetShop[]
+
+  @@map("list_of_item_pet_shops")
+}
+
+model PriceItemPetShop {
+  id                  BigInt    @id @default(autoincrement())
+  listOfItemPetShopId BigInt    @map("list_of_item_pet_shop_id")
+  sellingPrice        Decimal   @map("selling_price") @db.Decimal(15, 2)
+  capitalPrice        Decimal   @map("capital_price") @db.Decimal(15, 2)
+  petshopFee          Decimal   @default(0) @map("petshop_fee") @db.Decimal(15, 2)
+  isDeleted           Boolean   @default(false) @map("is_deleted")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  listOfItemPetShop       ListOfItemPetShop        @relation(fields: [listOfItemPetShopId], references: [id])
+  paymentPetshopItems     PaymentPetshopItem[]
+  paymentClinicPetshopItems PaymentClinicPetshopItem[]
+  masterPaymentPetshops   MasterPaymentPetshop[]
+
+  @@map("price_item_pet_shops")
+}
+
+// ─── SERVICES ─────────────────────────────────────────────────────────────────
+
+model ServiceCategory {
+  id           BigInt    @id @default(autoincrement())
+  categoryName String    @map("category_name")
+  branchId     BigInt    @map("branch_id")
+  isDeleted    Boolean   @default(false) @map("is_deleted")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  branch         Branch          @relation(fields: [branchId], references: [id])
+  listOfServices ListOfService[]
+
+  @@map("service_categories")
+}
+
+model ListOfService {
+  id                BigInt    @id @default(autoincrement())
+  serviceName       String    @map("service_name")
+  description       String?
+  durationMinutes   Int?      @map("duration_minutes")
+  isActive          Boolean   @default(true) @map("is_active")
+  serviceCategoryId BigInt    @map("service_category_id")
+  branchId          BigInt    @map("branch_id")
+  isDeleted         Boolean   @default(false) @map("is_deleted")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  serviceCategory     ServiceCategory      @relation(fields: [serviceCategoryId], references: [id])
+  branch              Branch               @relation(fields: [branchId], references: [id])
+  priceServices       PriceService[]
+
+  @@map("list_of_services")
+}
+
+model PriceService {
+  id              BigInt    @id @default(autoincrement())
+  listOfServiceId BigInt    @map("list_of_service_id")
+  sellingPrice    Decimal   @map("selling_price") @db.Decimal(15, 2)
+  capitalPrice    Decimal   @map("capital_price") @db.Decimal(15, 2)
+  doctorFee       Decimal   @default(0) @map("doctor_fee") @db.Decimal(15, 2)
+  petshopFee      Decimal   @default(0) @map("petshop_fee") @db.Decimal(15, 2)
+  isDeleted       Boolean   @default(false) @map("is_deleted")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  listOfService          ListOfService           @relation(fields: [listOfServiceId], references: [id])
+  detailServicePatients  DetailServicePatient[]
+
+  @@map("price_services")
+}
+
+// ─── MEDICINE GROUPS ──────────────────────────────────────────────────────────
+
+model MedicineGroup {
+  id          BigInt    @id @default(autoincrement())
+  groupName   String    @map("group_name")
+  description String?
+  branchId    BigInt    @map("branch_id")
+  isDeleted   Boolean   @default(false) @map("is_deleted")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  branch               Branch                    @relation(fields: [branchId], references: [id])
+  priceMedicineGroups  PriceMedicineGroup[]
+  detailMedicineGroups DetailMedicineGroupResult[]
+  paymentMedicineGroups ListOfPaymentMedicineGroup[]
+
+  @@map("medicine_groups")
+}
+
+model PriceMedicineGroup {
+  id              BigInt    @id @default(autoincrement())
+  medicineGroupId BigInt    @map("medicine_group_id")
+  sellingPrice    Decimal   @map("selling_price") @db.Decimal(15, 2)
+  capitalPrice    Decimal   @map("capital_price") @db.Decimal(15, 2)
+  doctorFee       Decimal   @default(0) @map("doctor_fee") @db.Decimal(15, 2)
+  petshopFee      Decimal   @default(0) @map("petshop_fee") @db.Decimal(15, 2)
+  isDeleted       Boolean   @default(false) @map("is_deleted")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  medicineGroup MedicineGroup @relation(fields: [medicineGroupId], references: [id])
+
+  @@map("price_medicine_groups")
+}
+
+// ─── CHECK-UP RESULTS ─────────────────────────────────────────────────────────
+
+model CheckUpResult {
+  id                       BigInt    @id @default(autoincrement())
+  patientRegistrationId    BigInt    @unique @map("patient_registration_id")
+  anamnesa                 String?
+  sign                     String?
+  diagnosa                 String?
+  prognosis                String?
+  homeInstructions         String?   @map("home_instructions")
+  weightKg                 Decimal?  @map("weight_kg") @db.Decimal(6, 2)
+  temperature              Decimal?  @db.Decimal(5, 2)
+  heartRate                Int?      @map("heart_rate")
+  respiratoryRate          Int?      @map("respiratory_rate")
+  statusOutpatientInpatient Int      @default(0) @map("status_outpatient_inpatient")
+  statusFinish             Boolean   @default(false) @map("status_finish")
+  statusPaidOff            Boolean   @default(false) @map("status_paid_off")
+  userId                   BigInt    @map("user_id")
+  isDeleted                Boolean   @default(false) @map("is_deleted")
+  deletedAt                DateTime? @map("deleted_at")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+
+  registration         Registration              @relation(fields: [patientRegistrationId], references: [id])
+  doctor               User                      @relation(fields: [userId], references: [id])
+  images               CheckUpImage[]
+  detailItems          DetailItemPatient[]
+  detailServices       DetailServicePatient[]
+  detailMedicineGroups DetailMedicineGroupResult[]
+  payments             ListOfPayment[]
+  weightRecord         WeightRecord?
+  vaccinations         VaccinationRecord[]
+  dewormings           DewormingRecord[]
+  procedures           MajorProcedureRecord[]
+
+  @@map("check_up_results")
+}
+
+model CheckUpImage {
+  id              BigInt   @id @default(autoincrement())
+  checkUpResultId BigInt   @map("check_up_result_id")
+  imagePath       String   @map("image_path")
+  filename        String
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  checkUpResult CheckUpResult @relation(fields: [checkUpResultId], references: [id])
+
+  @@map("check_up_images")
+}
+
+model DetailItemPatient {
+  id             BigInt   @id @default(autoincrement())
+  checkUpResultId BigInt  @map("check_up_result_id")
+  priceItemId    BigInt   @map("price_item_id")
+  quantity       Decimal  @db.Decimal(10, 2)
+  priceOverall   Decimal  @map("price_overall") @db.Decimal(15, 2)
+  detailMedicineGroupId BigInt? @map("detail_medicine_group_id")
+  statusPaidOff  Boolean  @default(false) @map("status_paid_off")
+  userId         BigInt   @map("user_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  checkUpResult        CheckUpResult              @relation(fields: [checkUpResultId], references: [id])
+  priceItem            PriceItem                  @relation(fields: [priceItemId], references: [id])
+  detailMedicineGroup  DetailMedicineGroupResult? @relation(fields: [detailMedicineGroupId], references: [id])
+  paymentItems         ListOfPaymentItem[]
+
+  @@map("detail_item_patients")
+}
+
+model DetailServicePatient {
+  id              BigInt   @id @default(autoincrement())
+  checkUpResultId BigInt   @map("check_up_result_id")
+  priceServiceId  BigInt   @map("price_service_id")
+  quantity        Int      @default(1)
+  priceOverall    Decimal  @map("price_overall") @db.Decimal(15, 2)
+  statusPaidOff   Boolean  @default(false) @map("status_paid_off")
+  userId          BigInt   @map("user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  checkUpResult   CheckUpResult          @relation(fields: [checkUpResultId], references: [id])
+  priceService    PriceService           @relation(fields: [priceServiceId], references: [id])
+  paymentServices ListOfPaymentService[]
+
+  @@map("detail_service_patients")
+}
+
+model DetailMedicineGroupResult {
+  id              BigInt   @id @default(autoincrement())
+  checkUpResultId BigInt   @map("check_up_result_id")
+  medicineGroupId BigInt   @map("medicine_group_id")
+  quantity        Int      @default(1)
+  remark          String?
+  statusPaidOff   Boolean  @default(false) @map("status_paid_off")
+  userId          BigInt   @map("user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  checkUpResult       CheckUpResult       @relation(fields: [checkUpResultId], references: [id])
+  medicineGroup       MedicineGroup       @relation(fields: [medicineGroupId], references: [id])
+  detailItemPatients  DetailItemPatient[]
+  paymentMedicineGroups ListOfPaymentMedicineGroup[]
+
+  @@map("detail_medicine_group_results")
+}
+
+// ─── PAYMENTS ─────────────────────────────────────────────────────────────────
+
+model PaymentMethod {
+  id          BigInt    @id @default(autoincrement())
+  methodName  String    @map("method_name")
+  isDeleted   Boolean   @default(false) @map("is_deleted")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  payments ListOfPayment[]
+
+  @@map("payment_methods")
+}
+
+model ListOfPayment {
+  id              BigInt    @id @default(autoincrement())
+  checkUpResultId BigInt    @map("check_up_result_id")
+  paymentMethodId BigInt?   @map("payment_method_id")
+  discount        Decimal   @default(0) @db.Decimal(15, 2)
+  userId          BigInt    @map("user_id")
+  isDeleted       Boolean   @default(false) @map("is_deleted")
+  deletedAt       DateTime? @map("deleted_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  checkUpResult   CheckUpResult              @relation(fields: [checkUpResultId], references: [id])
+  paymentMethod   PaymentMethod?             @relation(fields: [paymentMethodId], references: [id])
+  createdBy       User                       @relation(fields: [userId], references: [id])
+  paymentItems    ListOfPaymentItem[]
+  paymentServices ListOfPaymentService[]
+  paymentMedicineGroups ListOfPaymentMedicineGroup[]
+
+  @@map("list_of_payments")
+}
+
+model ListOfPaymentItem {
+  id                    BigInt    @id @default(autoincrement())
+  listOfPaymentId       BigInt    @map("list_of_payment_id")
+  checkUpResultId       BigInt    @map("check_up_result_id")
+  detailItemPatientId   BigInt    @map("detail_item_patient_id")
+  detailMedicineGroupCheckUpResultId BigInt? @map("detail_medicine_group_check_up_result_id")
+  quantity              Decimal   @db.Decimal(10, 2)
+  amountDiscount        Decimal   @default(0) @map("amount_discount") @db.Decimal(15, 2)
+  isDeleted             Boolean   @default(false) @map("is_deleted")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  listOfPayment       ListOfPayment     @relation(fields: [listOfPaymentId], references: [id])
+  detailItemPatient   DetailItemPatient @relation(fields: [detailItemPatientId], references: [id])
+
+  @@map("list_of_payment_items")
+}
+
+model ListOfPaymentService {
+  id                   BigInt    @id @default(autoincrement())
+  listOfPaymentId      BigInt    @map("list_of_payment_id")
+  checkUpResultId      BigInt    @map("check_up_result_id")
+  detailServicePatientId BigInt  @map("detail_service_patient_id")
+  amountDiscount       Decimal   @default(0) @map("amount_discount") @db.Decimal(15, 2)
+  isDeleted            Boolean   @default(false) @map("is_deleted")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  listOfPayment        ListOfPayment        @relation(fields: [listOfPaymentId], references: [id])
+  detailServicePatient DetailServicePatient @relation(fields: [detailServicePatientId], references: [id])
+
+  @@map("list_of_payment_services")
+}
+
+model ListOfPaymentMedicineGroup {
+  id                    BigInt    @id @default(autoincrement())
+  listOfPaymentId       BigInt    @map("list_of_payment_id")
+  medicineGroupId       BigInt    @map("medicine_group_id")
+  detailMedicineGroupResultId BigInt @map("detail_medicine_group_result_id")
+  quantity              Int       @default(1)
+  amountDiscount        Decimal   @default(0) @map("amount_discount") @db.Decimal(15, 2)
+  isDeleted             Boolean   @default(false) @map("is_deleted")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  listOfPayment         ListOfPayment             @relation(fields: [listOfPaymentId], references: [id])
+  medicineGroup         MedicineGroup             @relation(fields: [medicineGroupId], references: [id])
+  detailMedicineGroup   DetailMedicineGroupResult @relation(fields: [detailMedicineGroupResultId], references: [id])
+
+  @@map("list_of_payment_medicine_groups")
+}
+
+// ─── PETSHOP PAYMENTS ─────────────────────────────────────────────────────────
+
+model MasterPaymentPetshop {
+  id                  BigInt    @id @default(autoincrement())
+  branchId            BigInt    @map("branch_id")
+  priceItemPetShopId  BigInt    @map("price_item_pet_shop_id")
+  paymentMethodId     BigInt?   @map("payment_method_id")
+  isDeleted           Boolean   @default(false) @map("is_deleted")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  branch            Branch            @relation(fields: [branchId], references: [id])
+  priceItemPetShop  PriceItemPetShop  @relation(fields: [priceItemPetShopId], references: [id])
+
+  @@map("master_payment_petshops")
+}
+
+model PaymentPetshop {
+  id                 BigInt   @id @default(autoincrement())
+  userId             BigInt   @map("user_id")
+  paymentMethodId    BigInt?  @map("payment_method_id")
+  discount           Decimal  @default(0) @db.Decimal(15, 2)
+  isDeleted          Boolean  @default(false) @map("is_deleted")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  user  User                      @relation(fields: [userId], references: [id])
+  items PaymentPetshopItem[]
+  clinicItems PaymentClinicPetshopItem[]
+
+  @@map("payment_petshops")
+}
+
+model PaymentPetshopItem {
+  id                 BigInt   @id @default(autoincrement())
+  paymentPetshopId   BigInt   @map("payment_petshop_id")
+  priceItemPetShopId BigInt   @map("price_item_pet_shop_id")
+  totalItem          Decimal  @map("total_item") @db.Decimal(10, 2)
+  amountDiscount     Decimal  @default(0) @map("amount_discount") @db.Decimal(15, 2)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  paymentPetshop   PaymentPetshop   @relation(fields: [paymentPetshopId], references: [id])
+  priceItemPetShop PriceItemPetShop @relation(fields: [priceItemPetShopId], references: [id])
+
+  @@map("payment_petshop_items")
+}
+
+model PaymentClinicPetshopItem {
+  id                 BigInt   @id @default(autoincrement())
+  paymentPetshopId   BigInt   @map("payment_petshop_id")
+  priceItemPetShopId BigInt   @map("price_item_pet_shop_id")
+  totalItem          Decimal  @map("total_item") @db.Decimal(10, 2)
+  amountDiscount     Decimal  @default(0) @map("amount_discount") @db.Decimal(15, 2)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  paymentPetshop   PaymentPetshop   @relation(fields: [paymentPetshopId], references: [id])
+  priceItemPetShop PriceItemPetShop @relation(fields: [priceItemPetShopId], references: [id])
+
+  @@map("payment_clinic_petshop_items")
+}
+
+// ─── PAYROLL ──────────────────────────────────────────────────────────────────
+
+model Payroll {
+  id                  BigInt    @id @default(autoincrement())
+  userEmployeeId      BigInt    @map("user_employee_id")
+  branchId            BigInt    @map("branch_id")
+  datePayed           DateTime  @map("date_payed")
+  periodMonth         Int       @map("period_month")
+  periodYear          Int       @map("period_year")
+  basicSallary        Decimal   @map("basic_sallary") @db.Decimal(15, 2)
+  accomodation        Decimal   @default(0) @db.Decimal(15, 2)
+  percentageTurnover  Decimal   @default(0) @map("percentage_turnover") @db.Decimal(5, 2)
+  amountTurnover      Decimal   @default(0) @map("amount_turnover") @db.Decimal(15, 2)
+  totalTurnover       Decimal   @default(0) @map("total_turnover") @db.Decimal(15, 2)
+  minusTurnover       Decimal   @default(0) @map("minus_turnover") @db.Decimal(15, 2)
+  amountInpatient     Decimal   @default(0) @map("amount_inpatient") @db.Decimal(15, 2)
+  countInpatient      Int       @default(0) @map("count_inpatient")
+  totalInpatient      Decimal   @default(0) @map("total_inpatient") @db.Decimal(15, 2)
+  percentageSurgery   Decimal   @default(0) @map("percentage_surgery") @db.Decimal(5, 2)
+  amountSurgery       Decimal   @default(0) @map("amount_surgery") @db.Decimal(15, 2)
+  totalSurgery        Decimal   @default(0) @map("total_surgery") @db.Decimal(15, 2)
+  amountGrooming      Decimal   @default(0) @map("amount_grooming") @db.Decimal(15, 2)
+  countGrooming       Int       @default(0) @map("count_grooming")
+  totalGrooming       Decimal   @default(0) @map("total_grooming") @db.Decimal(15, 2)
+  totalOverall        Decimal   @default(0) @map("total_overall") @db.Decimal(15, 2)
+  pph21Amount         Decimal   @default(0) @map("pph21_amount") @db.Decimal(15, 2)
+  userId              BigInt    @map("user_id")
+  userUpdateId        BigInt?   @map("user_update_id")
+  isDeleted           Boolean   @default(false) @map("is_deleted")
+  deletedAt           DateTime? @map("deleted_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  employee  User @relation("EmployeePayrolls", fields: [userEmployeeId], references: [id])
+  createdBy User @relation("CreatedByPayrolls", fields: [userId], references: [id])
+  branch    Branch @relation(fields: [branchId], references: [id])
+
+  @@unique([userEmployeeId, periodMonth, periodYear])
+  @@map("payrolls")
+}
+
+// ─── EXPENSES ─────────────────────────────────────────────────────────────────
+
+model Expense {
+  id            BigInt    @id @default(autoincrement())
+  dateSpend     DateTime  @map("date_spend")
+  userIdSpender BigInt    @map("user_id_spender")
+  branchId      BigInt    @map("branch_id")
+  category      String    @default("Lain-lain")
+  itemName      String    @map("item_name")
+  notes         String?
+  quantity      Decimal   @db.Decimal(10, 2)
+  amount        Decimal   @db.Decimal(15, 2)
+  amountOverall Decimal   @map("amount_overall") @db.Decimal(15, 2)
+  userId        BigInt    @map("user_id")
+  isDeleted     Boolean   @default(false) @map("is_deleted")
+  deletedAt     DateTime? @map("deleted_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  spender User   @relation(fields: [userIdSpender], references: [id])
+  branch  Branch @relation(fields: [branchId], references: [id])
+
+  @@map("expenses")
+}
+
+// ─── REKAM MEDIS ──────────────────────────────────────────────────────────────
+
+// Kartu rekam medis permanen — 1 hewan = 1 kartu, dibuat otomatis saat hewan pertama kali daftar
+model MedicalRecord {
+  id                 BigInt    @id @default(autoincrement())
+  patientId          BigInt    @unique @map("patient_id")
+  bloodType          String?   @map("blood_type")
+  allergies          String?
+  chronicConditions  String?   @map("chronic_conditions")
+  specialNotes       String?   @map("special_notes")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@map("medical_records")
+}
+
+// Berat badan — wajib dicatat setiap kunjungan (check-up)
+model WeightRecord {
+  id              BigInt   @id @default(autoincrement())
+  patientId       BigInt   @map("patient_id")
+  checkUpResultId BigInt   @unique @map("check_up_result_id")
+  weightKg        Decimal  @map("weight_kg") @db.Decimal(6, 2)
+  recordedAt      DateTime @map("recorded_at")
+  userId          BigInt   @map("user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  patient       Patient       @relation(fields: [patientId], references: [id])
+  checkUpResult CheckUpResult @relation(fields: [checkUpResultId], references: [id])
+
+  @@map("weight_records")
+}
+
+// Riwayat vaksinasi
+model VaccinationRecord {
+  id              BigInt    @id @default(autoincrement())
+  patientId       BigInt    @map("patient_id")
+  checkUpResultId BigInt?   @map("check_up_result_id")
+  vaccineName     String    @map("vaccine_name")
+  batchNumber     String?   @map("batch_number")
+  administeredAt  DateTime  @map("administered_at")
+  nextDueAt       DateTime? @map("next_due_at")
+  notes           String?
+  userId          BigInt    @map("user_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  patient       Patient        @relation(fields: [patientId], references: [id])
+  checkUpResult CheckUpResult? @relation(fields: [checkUpResultId], references: [id])
+
+  @@map("vaccination_records")
+}
+
+// Riwayat obat cacing
+model DewormingRecord {
+  id              BigInt    @id @default(autoincrement())
+  patientId       BigInt    @map("patient_id")
+  checkUpResultId BigInt?   @map("check_up_result_id")
+  medicationName  String    @map("medication_name")
+  administeredAt  DateTime  @map("administered_at")
+  nextDueAt       DateTime? @map("next_due_at")
+  notes           String?
+  userId          BigInt    @map("user_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  patient       Patient        @relation(fields: [patientId], references: [id])
+  checkUpResult CheckUpResult? @relation(fields: [checkUpResultId], references: [id])
+
+  @@map("deworming_records")
+}
+
+// Riwayat tindakan besar (operasi, sterilisasi, dll)
+model MajorProcedureRecord {
+  id              BigInt    @id @default(autoincrement())
+  patientId       BigInt    @map("patient_id")
+  checkUpResultId BigInt?   @map("check_up_result_id")
+  procedureName   String    @map("procedure_name")
+  performedAt     DateTime  @map("performed_at")
+  notes           String?
+  userId          BigInt    @map("user_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  patient       Patient        @relation(fields: [patientId], references: [id])
+  checkUpResult CheckUpResult? @relation(fields: [checkUpResultId], references: [id])
+
+  @@map("major_procedure_records")
+}
+
+// ── WhatsApp Notification Log ────────────────────────────────────────────────
+
+enum WaLogStatus {
+  pending
+  sent
+  failed
+}
+
+enum WaNotifType {
+  queue_confirmation
+  queue_called
+  vaccination_reminder
+  deworming_reminder
+  payment_receipt
+  inpatient_update
+  custom
+}
+
+model WhatsappLog {
+  id             BigInt      @id @default(autoincrement())
+  recipientPhone String      @map("recipient_phone")
+  recipientName  String?     @map("recipient_name")
+  type           WaNotifType
+  message        String      @db.Text
+  status         WaLogStatus @default(pending)
+  errorMessage   String?     @map("error_message")
+  sentAt         DateTime?   @map("sent_at")
+  patientId      BigInt?     @map("patient_id")
+  registrationId BigInt?     @map("registration_id")
+  branchId       BigInt      @map("branch_id")
+  userId         BigInt      @map("user_id")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  patient      Patient?      @relation(fields: [patientId], references: [id])
+  branch       Branch        @relation(fields: [branchId], references: [id])
+
+  @@map("whatsapp_logs")
+}
+
+// ── Staff Notification (in-app notification center) ──────────────────────────
+// Broadcast per cabang — semua staf di cabang yang sama melihat notifikasi yang
+// sama, "dibaca" bersifat global per notifikasi (bukan per user) untuk v1 ini.
+
+enum StaffNotificationType {
+  low_stock
+  new_booking
+  queue_new
+}
+
+model StaffNotification {
+  id         BigInt                @id @default(autoincrement())
+  branchId   BigInt                @map("branch_id")
+  type       StaffNotificationType
+  title      String
+  message    String
+  entityType String?               @map("entity_type")
+  entityId   String?               @map("entity_id")
+  isRead     Boolean               @default(false) @map("is_read")
+  createdAt  DateTime              @default(now()) @map("created_at")
+
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@index([branchId, isRead])
+  @@map("staff_notifications")
+}
+
+// ── Booking & Appointment ────────────────────────────────────────────────────
+
+enum AppointmentStatus {
+  pending
+  confirmed
+  declined
+  rescheduled
+  converted
+  cancelled
+}
+
+model Appointment {
+  id              BigInt            @id @default(autoincrement())
+  // Caller identity (boleh tanpa login)
+  ownerName       String            @map("owner_name")
+  ownerPhone      String            @map("owner_phone")
+  petName         String            @map("pet_name")
+  petCategory     String?           @map("pet_category")
+  // Link ke pasien yang sudah terdaftar (opsional)
+  patientId       BigInt?           @map("patient_id")
+  // Target
+  doctorUserId    BigInt            @map("doctor_user_id")
+  branchId        BigInt            @map("branch_id")
+  appointmentDate DateTime          @map("appointment_date") @db.Date
+  appointmentTime String            @map("appointment_time") // "09:00"
+  complaint       String
+  notes           String?
+  status          AppointmentStatus @default(pending)
+  declineReason   String?           @map("decline_reason")
+  // Jika sudah di-convert ke antrian
+  registrationId  BigInt?           @unique @map("registration_id")
+  // Audit
+  handledBy       BigInt?           @map("handled_by")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  patient      Patient?  @relation(fields: [patientId], references: [id])
+  doctor       User      @relation("DoctorAppointments", fields: [doctorUserId], references: [id])
+  branch       Branch    @relation(fields: [branchId], references: [id])
+
+  @@map("appointments")
+}
+
+// ── Reminder Log ─────────────────────────────────────────────────────────────
+
+enum ReminderType {
+  vaccination
+  deworming
+}
+
+enum ReminderStatus {
+  pending
+  sent
+  failed
+  skipped
+}
+
+model ReminderLog {
+  id         BigInt         @id @default(autoincrement())
+  type       ReminderType
+  patientId  BigInt         @map("patient_id")
+  recordId   BigInt         @map("record_id")   // VaccinationRecord.id or DewormingRecord.id
+  dueDate    DateTime       @map("due_date")     @db.Date
+  status     ReminderStatus @default(pending)
+  channel    String         @default("whatsapp")
+  sentAt     DateTime?      @map("sent_at")
+  errorMsg   String?        @map("error_msg")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  patient    Patient        @relation(fields: [patientId], references: [id])
+
+  @@unique([type, recordId])   // satu record = satu reminder log per siklus
+  @@map("reminder_logs")
+}
+
+// ── Owner OTP (untuk portal pemilik) ─────────────────────────────────────────
+
+model OwnerOTP {
+  id        BigInt   @id @default(autoincrement())
+  ownerId   BigInt   @map("owner_id")
+  otp       String   @db.VarChar(6)
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  owner     Owner    @relation(fields: [ownerId], references: [id])
+
+  @@map("owner_otps")
+}
+
+// ── Grooming / Salon ─────────────────────────────────────────────────────────
+
+enum GroomingStatus {
+  waiting
+  in_progress
+  done
+  cancelled
+}
+
+model GroomingPackage {
+  id          BigInt   @id @default(autoincrement())
+  packageName String   @map("package_name")
+  description String?
+  price       Decimal  @db.Decimal(15, 2)
+  durationMin Int      @default(60) @map("duration_min")
+  branchId    BigInt   @map("branch_id")
+  isActive    Boolean  @default(true) @map("is_active")
+  isDeleted   Boolean  @default(false) @map("is_deleted")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  branch   Branch           @relation(fields: [branchId], references: [id])
+  sessions GroomingSession[]
+
+  @@map("grooming_packages")
+}
+
+model GroomingSession {
+  id          BigInt         @id @default(autoincrement())
+  queueNumber Int            @map("queue_number")
+  patientId   BigInt         @map("patient_id")
+  groomerId   BigInt         @map("groomer_id")
+  packageId   BigInt         @map("package_id")
+  branchId    BigInt         @map("branch_id")
+  status      GroomingStatus @default(waiting)
+  scheduledAt DateTime?      @map("scheduled_at")
+  startedAt   DateTime?      @map("started_at")
+  completedAt DateTime?      @map("completed_at")
+  notes       String?
+  totalPrice  Decimal        @default(0) @map("total_price") @db.Decimal(15, 2)
+  discount    Decimal        @default(0) @db.Decimal(15, 2)
+  isPaid      Boolean        @default(false) @map("is_paid")
+  userId      BigInt         @map("user_id")
+  isDeleted   Boolean        @default(false) @map("is_deleted")
+  deletedAt   DateTime?      @map("deleted_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  patient    Patient         @relation(fields: [patientId], references: [id])
+  groomer    User            @relation("GroomerSessions", fields: [groomerId], references: [id])
+  registrant User            @relation("GroomingRegistrant", fields: [userId], references: [id])
+  package    GroomingPackage @relation(fields: [packageId], references: [id])
+  branch     Branch          @relation(fields: [branchId], references: [id])
+
+  @@map("grooming_sessions")
+}
+
+// ─── AUDIT TRAIL ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         BigInt   @id @default(autoincrement())
+  tenantId   BigInt?  @map("tenant_id")
+  userId     BigInt?  @map("user_id")
+  username   String?
+  action     String
+  resource   String
+  resourceId String?  @map("resource_id")
+  details    Json?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([resource, action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─── F-28: Broadcast & CRM WhatsApp ─────────────────────────────────────────
+
+enum BroadcastStatus {
+  draft
+  sending
+  done
+  failed
+}
+
+model BroadcastLog {
+  id           BigInt          @id @default(autoincrement())
+  tenantId     BigInt?         @map("tenant_id")
+  branchId     BigInt          @map("branch_id")
+  userId       BigInt          @map("user_id")
+  title        String
+  message      String          @db.Text
+  segment      Json?
+  status       BroadcastStatus @default(draft)
+  totalTarget  Int             @default(0) @map("total_target")
+  totalSent    Int             @default(0) @map("total_sent")
+  totalFailed  Int             @default(0) @map("total_failed")
+  scheduledAt  DateTime?       @map("scheduled_at")
+  startedAt    DateTime?       @map("started_at")
+  completedAt  DateTime?       @map("completed_at")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  branch     Branch              @relation(fields: [branchId], references: [id])
+  user       User                @relation(fields: [userId], references: [id])
+  recipients BroadcastRecipient[]
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@map("broadcast_logs")
+}
+
+model BroadcastRecipient {
+  id           BigInt   @id @default(autoincrement())
+  broadcastId  BigInt   @map("broadcast_id")
+  ownerId      BigInt   @map("owner_id")
+  phone        String
+  status       String   @default("pending")
+  sentAt       DateTime? @map("sent_at")
+  errorMsg     String?   @map("error_msg")
+
+  broadcast    BroadcastLog @relation(fields: [broadcastId], references: [id])
+  owner        Owner        @relation(fields: [ownerId], references: [id])
+
+  @@map("broadcast_recipients")
+}
+
+// ─── F-29: Loyalty Program ───────────────────────────────────────────────────
+
+model LoyaltyConfig {
+  id              BigInt   @id @default(autoincrement())
+  tenantId        BigInt?  @map("tenant_id")
+  branchId        BigInt   @unique @map("branch_id")
+  pointsPerRupiah Decimal  @default(0.001) @map("points_per_rupiah") @db.Decimal(10, 6)
+  silverThreshold Int      @default(500)  @map("silver_threshold")
+  goldThreshold   Int      @default(2000) @map("gold_threshold")
+  redeemRate      Decimal  @default(100) @map("redeem_rate") @db.Decimal(10, 2)
+  isActive        Boolean  @default(true) @map("is_active")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  branch  Branch @relation(fields: [branchId], references: [id])
+
+  @@map("loyalty_configs")
+}
+
+enum LoyaltyTxType {
+  earn
+  redeem
+  bonus
+  adjust
+}
+
+model LoyaltyPoint {
+  id          BigInt        @id @default(autoincrement())
+  ownerId     BigInt        @map("owner_id")
+  branchId    BigInt        @map("branch_id")
+  tenantId    BigInt?       @map("tenant_id")
+  txType      LoyaltyTxType @map("tx_type")
+  points      Int
+  balance     Int
+  description String?
+  refId       String?       @map("ref_id")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  owner   Owner  @relation(fields: [ownerId], references: [id])
+  branch  Branch @relation(fields: [branchId], references: [id])
+
+  @@index([ownerId])
+  @@index([branchId])
+  @@map("loyalty_points")
+}
+
+model LoyaltyMember {
+  id          BigInt   @id @default(autoincrement())
+  ownerId     BigInt   @map("owner_id")
+  branchId    BigInt   @map("branch_id")
+  tenantId    BigInt?  @map("tenant_id")
+  totalPoints Int      @default(0) @map("total_points")
+  tier        String   @default("basic")
+  totalSpend  Decimal  @default(0) @map("total_spend") @db.Decimal(15, 2)
+  joinedAt    DateTime @default(now()) @map("joined_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  owner   Owner  @relation(fields: [ownerId], references: [id])
+  branch  Branch @relation(fields: [branchId], references: [id])
+
+  @@unique([ownerId, branchId])
+  @@map("loyalty_members")
+}
+
+
+
+// ─── F-30: Rating & Ulasan Pasca-Kunjungan ───────────────────────────────────
+
+model ReviewRecord {
+  id             BigInt    @id @default(autoincrement())
+  registrationId BigInt    @unique @map("registration_id")
+  patientId      BigInt    @map("patient_id")
+  doctorId       BigInt    @map("doctor_id")
+  branchId       BigInt    @map("branch_id")
+  tenantId       BigInt?   @map("tenant_id")
+  rating         Int?
+  comment        String?
+  isPublished    Boolean   @default(false) @map("is_published")
+  surveyToken    String    @unique @map("survey_token")
+  sentAt         DateTime? @map("sent_at")
+  repliedAt      DateTime? @map("replied_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  registration Registration @relation(fields: [registrationId], references: [id])
+  patient      Patient      @relation(fields: [patientId], references: [id])
+  doctor       User         @relation("DoctorReviews", fields: [doctorId], references: [id])
+  branch       Branch       @relation(fields: [branchId], references: [id])
+
+  @@index([branchId])
+  @@index([doctorId])
+  @@index([rating])
+  @@map("review_records")
+}
+
+// ─── F-31: Jadwal Dokter & Shift ─────────────────────────────────────────────
+
+model DoctorSchedule {
+  id          BigInt   @id @default(autoincrement())
+  doctorId    BigInt   @map("doctor_id")
+  branchId    BigInt   @map("branch_id")
+  tenantId    BigInt?  @map("tenant_id")
+  dayOfWeek   Int      @map("day_of_week")   // 0=Sun 1=Mon ... 6=Sat
+  shiftStart  String   @map("shift_start")   // "08:00"
+  shiftEnd    String   @map("shift_end")     // "16:00"
+  maxPatients Int      @default(20) @map("max_patients")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  doctor  User   @relation("DoctorSchedules", fields: [doctorId], references: [id])
+  branch  Branch @relation(fields: [branchId], references: [id])
+
+  @@unique([doctorId, branchId, dayOfWeek])
+  @@map("doctor_schedules")
+}
+
+enum LeaveStatus {
+  pending
+  approved
+  declined
+}
+
+model DoctorLeave {
+  id          BigInt      @id @default(autoincrement())
+  doctorId    BigInt      @map("doctor_id")
+  branchId    BigInt      @map("branch_id")
+  tenantId    BigInt?     @map("tenant_id")
+  leaveDate   DateTime    @map("leave_date")
+  reason      String?
+  status      LeaveStatus @default(pending)
+  approvedBy  BigInt?     @map("approved_by")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  doctor    User    @relation("DoctorLeaves", fields: [doctorId], references: [id])
+  approver  User?   @relation("LeaveApprovals", fields: [approvedBy], references: [id])
+  branch    Branch  @relation(fields: [branchId], references: [id])
+
+  @@index([doctorId])
+  @@index([leaveDate])
+  @@map("doctor_leaves")
+}
+
+// ─── F-32: Pet Hotel / Penginapan Hewan ──────────────────────────────────────
+
+enum HotelRoomType {
+  vip
+  reguler
+  isolasi
+}
+
+enum HotelBookingStatus {
+  pending
+  checkedin
+  checkedout
+  cancelled
+}
+
+model HotelRoom {
+  id            BigInt       @id @default(autoincrement())
+  branchId      BigInt       @map("branch_id")
+  tenantId      BigInt?      @map("tenant_id")
+  roomName      String       @map("room_name")
+  roomType      HotelRoomType @default(reguler) @map("room_type")
+  capacity      Int          @default(1)
+  pricePerNight Decimal      @map("price_per_night") @db.Decimal(15, 2)
+  description   String?
+  isActive      Boolean      @default(true) @map("is_active")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  branch   Branch         @relation(fields: [branchId], references: [id])
+  bookings HotelBooking[]
+
+  @@index([branchId])
+  @@map("hotel_rooms")
+}
+
+model HotelBooking {
+  id           BigInt             @id @default(autoincrement())
+  roomId       BigInt             @map("room_id")
+  patientId    BigInt             @map("patient_id")
+  ownerId      BigInt             @map("owner_id")
+  branchId     BigInt             @map("branch_id")
+  tenantId     BigInt?            @map("tenant_id")
+  checkIn      DateTime           @map("check_in")
+  checkOut     DateTime           @map("check_out")
+  totalNights  Int                @default(1) @map("total_nights")
+  totalPrice   Decimal            @default(0) @map("total_price") @db.Decimal(15, 2)
+  specialNeeds String?            @map("special_needs")
+  status       HotelBookingStatus @default(pending)
+  isPaid       Boolean            @default(false) @map("is_paid")
+  notes        String?
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+
+  room     HotelRoom      @relation(fields: [roomId], references: [id])
+  patient  Patient        @relation(fields: [patientId], references: [id])
+  owner    Owner          @relation(fields: [ownerId], references: [id])
+  branch   Branch         @relation(fields: [branchId], references: [id])
+  careLogs HotelCareLog[]
+
+  @@index([branchId])
+  @@index([checkIn, checkOut])
+  @@map("hotel_bookings")
+}
+
+model HotelCareLog {
+  id            BigInt   @id @default(autoincrement())
+  bookingId     BigInt   @map("booking_id")
+  staffId       BigInt   @map("staff_id")
+  logDate       DateTime @map("log_date")
+  mealNote      String?  @map("meal_note")
+  drinkNote     String?  @map("drink_note")
+  activityNote  String?  @map("activity_note")
+  conditionNote String?  @map("condition_note")
+  photoUrl      String?  @map("photo_url")
+  sentToOwner   Boolean  @default(false) @map("sent_to_owner")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  booking HotelBooking @relation(fields: [bookingId], references: [id])
+  staff   User         @relation(fields: [staffId], references: [id])
+
+  @@index([bookingId])
+  @@map("hotel_care_logs")
+}
+
+// ─── F-33: Telemedicine / Konsultasi Online ───────────────────────────────────
+
+enum TelemedStatus {
+  pending
+  confirmed
+  ongoing
+  done
+  cancelled
+}
+
+model TelemedSession {
+  id          BigInt        @id @default(autoincrement())
+  patientId   BigInt        @map("patient_id")
+  doctorId    BigInt        @map("doctor_id")
+  ownerId     BigInt        @map("owner_id")
+  branchId    BigInt        @map("branch_id")
+  tenantId    BigInt?       @map("tenant_id")
+  status      TelemedStatus @default(pending)
+  channel     String        @default("chat")
+  scheduledAt DateTime?     @map("scheduled_at")
+  startedAt   DateTime?     @map("started_at")
+  endedAt     DateTime?     @map("ended_at")
+  complaint   String?
+  doctorNotes String?       @map("doctor_notes")
+  ePrescription String?     @map("e_prescription")
+  fee         Decimal       @default(0) @db.Decimal(15, 2)
+  isPaid      Boolean       @default(false) @map("is_paid")
+  rating      Int?
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  doctor  User    @relation("DoctorTelemeds", fields: [doctorId], references: [id])
+  owner   Owner   @relation(fields: [ownerId], references: [id])
+  branch  Branch  @relation(fields: [branchId], references: [id])
+
+  @@index([branchId])
+  @@index([doctorId])
+  @@map("telemed_sessions")
+}
+
+// ─── F-34: Manajemen Lab & Hasil Pemeriksaan ─────────────────────────────────
+
+enum LabStatus {
+  pending
+  processing
+  ready
+}
+
+model LabRequest {
+  id             BigInt    @id @default(autoincrement())
+  branchId       BigInt    @map("branch_id")
+  tenantId       BigInt?   @map("tenant_id")
+  patientId      BigInt    @map("patient_id")
+  requestedById  BigInt    @map("requested_by_id")
+  testType       String    @map("test_type")
+  notes          String?
+  status         LabStatus @default(pending)
+  priority       String    @default("normal")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  branch      Branch     @relation(fields: [branchId], references: [id])
+  patient     Patient    @relation(fields: [patientId], references: [id])
+  requestedBy User       @relation("DoctorLabRequests", fields: [requestedById], references: [id])
+  result      LabResult?
+
+  @@index([patientId])
+  @@index([branchId])
+  @@map("lab_requests")
+}
+
+model LabResult {
+  id              BigInt    @id @default(autoincrement())
+  requestId       BigInt    @unique @map("request_id")
+  templateType    String?   @map("template_type")
+  resultData      Json?     @map("result_data")
+  resultFile      String?   @map("result_file")
+  interpretation  String?
+  isReady         Boolean   @default(false) @map("is_ready")
+  readyAt         DateTime? @map("ready_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  request LabRequest @relation(fields: [requestId], references: [id])
+
+  @@map("lab_results")
+}
+
+// ─── F-36: AI Symptom Checker ────────────────────────────────────────────────
+
+enum UrgencyLevel {
+  segera
+  dalam_24_jam
+  bisa_tunggu
+  tidak_perlu
+}
+
+model AiSymptomLog {
+  id              BigInt       @id @default(autoincrement())
+  branchId        BigInt?      @map("branch_id")
+  tenantId        BigInt?      @map("tenant_id")
+  petName         String?      @map("pet_name")
+  species         String?
+  age             Int?
+  inputSymptoms   String       @map("input_symptoms")
+  aiResponse      String       @map("ai_response")
+  urgencyLevel    UrgencyLevel @map("urgency_level")
+  bookingCreated  Boolean      @default(false) @map("booking_created")
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  @@index([branchId])
+  @@index([urgencyLevel])
+  @@map("ai_symptom_logs")
+}
+
+// ─── F-37: Drug Interaction & Kalkulator Dosis ───────────────────────────────
+
+model DrugDatabase {
+  id                 BigInt    @id @default(autoincrement())
+  drugName           String    @unique @map("drug_name")
+  genericName        String?   @map("generic_name")
+  category           String    @default("umum")
+  species            String    @default("all")
+  dosagePerKgMin     Decimal?  @map("dosage_per_kg_min") @db.Decimal(10, 4)
+  dosagePerKgMax     Decimal?  @map("dosage_per_kg_max") @db.Decimal(10, 4)
+  unit               String    @default("mg")
+  frequency          String?
+  contraindications  String?
+  sideEffects        String?   @map("side_effects")
+  isActive           Boolean   @default(true) @map("is_active")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  interactionsAsA DrugInteraction[] @relation("DrugA")
+  interactionsAsB DrugInteraction[] @relation("DrugB")
+
+  @@map("drug_database")
+}
+
+model DrugInteraction {
+  id          BigInt @id @default(autoincrement())
+  drugAId     BigInt @map("drug_a_id")
+  drugBId     BigInt @map("drug_b_id")
+  severity    String // warning / danger
+  description String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  drugA DrugDatabase @relation("DrugA", fields: [drugAId], references: [id])
+  drugB DrugDatabase @relation("DrugB", fields: [drugBId], references: [id])
+
+  @@unique([drugAId, drugBId])
+  @@map("drug_interactions")
+}
+
+// ─── F-40: Google Calendar Sync ──────────────────────────────────────────────
+
+model DoctorCalendarSync {
+  id                  BigInt    @id @default(autoincrement())
+  doctorId            BigInt    @unique @map("doctor_id")
+  googleAccessToken   String?   @map("google_access_token")
+  googleRefreshToken  String?   @map("google_refresh_token")
+  googleEmail         String?   @map("google_email")
+  syncEnabled         Boolean   @default(false) @map("sync_enabled")
+  lastSyncAt          DateTime? @map("last_sync_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  doctor User @relation("CalendarSync", fields: [doctorId], references: [id])
+
+  @@map("doctor_calendar_syncs")
+}
+
+// ─── F-42: Integrasi Marketplace ─────────────────────────────────────────────
+
+model MarketplaceIntegration {
+  id           BigInt    @id @default(autoincrement())
+  branchId     BigInt    @map("branch_id")
+  tenantId     BigInt?   @map("tenant_id")
+  platform     String    // tokopedia / shopee
+  shopId       String?   @map("shop_id")
+  shopName     String?   @map("shop_name")
+  accessToken  String?   @map("access_token")
+  syncEnabled  Boolean   @default(false) @map("sync_enabled")
+  lastSyncAt   DateTime? @map("last_sync_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  branch Branch              @relation(fields: [branchId], references: [id])
+  orders MarketplaceOrder[]
+
+  @@unique([branchId, platform])
+  @@map("marketplace_integrations")
+}
+
+model MarketplaceOrder {
+  id              BigInt    @id @default(autoincrement())
+  integrationId   BigInt    @map("integration_id")
+  orderId         String    @map("order_id")
+  platform        String
+  customerName    String    @map("customer_name")
+  items           Json
+  totalAmount     Decimal   @map("total_amount") @db.Decimal(15, 2)
+  status          String    @default("pending")
+  orderDate       DateTime  @map("order_date")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  integration MarketplaceIntegration @relation(fields: [integrationId], references: [id])
+
+  @@index([integrationId])
+  @@map("marketplace_orders")
+}
