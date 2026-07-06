@@ -94,6 +94,12 @@ export default function PasienDetailScreen() {
         >
           <Text style={styles.rekamMedisBtnText}>📖 Lihat Rekam Medis Lengkap</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.rekamMedisBtn, { marginTop: 8 }]}
+          onPress={() => navigation.navigate('LabHistory', { patientId: patient.id })}
+        >
+          <Text style={styles.rekamMedisBtnText}>🧪 Riwayat Lab</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.card}>

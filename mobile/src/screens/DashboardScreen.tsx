@@ -165,6 +165,68 @@ export default function DashboardScreen() {
         <Text style={styles.linkCardText}>Jadwal Dokter</Text>
         <Text style={styles.linkCardChevron}>›</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity style={[styles.linkCard, { marginTop: 10 }]} onPress={() => navigation.navigate('RawatInap')}>
+        <Text style={{ fontSize: 18 }}>🏥</Text>
+        <Text style={styles.linkCardText}>Rawat Inap</Text>
+        <Text style={styles.linkCardChevron}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={[styles.linkCard, { marginTop: 10 }]} onPress={() => navigation.navigate('PetHotel')}>
+        <Text style={{ fontSize: 18 }}>🏨</Text>
+        <Text style={styles.linkCardText}>Pet Hotel</Text>
+        <Text style={styles.linkCardChevron}>›</Text>
+      </TouchableOpacity>
+
+      {user?.role !== 'dokter' && (
+        <TouchableOpacity style={[styles.linkCard, { marginTop: 10 }]} onPress={() => navigation.navigate('Grooming')}>
+          <Text style={{ fontSize: 18 }}>✂️</Text>
+          <Text style={styles.linkCardText}>Grooming</Text>
+          <Text style={styles.linkCardChevron}>›</Text>
+        </TouchableOpacity>
+      )}
+
+      {(user?.role === 'admin' || user?.role === 'superadmin') && (
+        <TouchableOpacity style={[styles.linkCard, { marginTop: 10 }]} onPress={() => navigation.navigate('Reminder')}>
+          <Text style={{ fontSize: 18 }}>🔔</Text>
+          <Text style={styles.linkCardText}>Reminder Vaksin & Obat Cacing</Text>
+          <Text style={styles.linkCardChevron}>›</Text>
+        </TouchableOpacity>
+      )}
+
+      {(user?.role === 'admin' || user?.role === 'superadmin') && (
+        <TouchableOpacity style={[styles.linkCard, { marginTop: 10 }]} onPress={() => navigation.navigate('Review')}>
+          <Text style={{ fontSize: 18 }}>⭐</Text>
+          <Text style={styles.linkCardText}>Ulasan Pelanggan</Text>
+          <Text style={styles.linkCardChevron}>›</Text>
+        </TouchableOpacity>
+      )}
+
+      <TouchableOpacity style={[styles.linkCard, { marginTop: 10 }]} onPress={() => navigation.navigate('Telemed')}>
+        <Text style={{ fontSize: 18 }}>💻</Text>
+        <Text style={styles.linkCardText}>Telemedicine</Text>
+        <Text style={styles.linkCardChevron}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={[styles.linkCard, { marginTop: 10 }]} onPress={() => navigation.navigate('Laporan')}>
+        <Text style={{ fontSize: 18 }}>📊</Text>
+        <Text style={styles.linkCardText}>Laporan Keuangan</Text>
+        <Text style={styles.linkCardChevron}>›</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={[styles.linkCard, { marginTop: 10 }]} onPress={() => navigation.navigate('Lab')}>
+        <Text style={{ fontSize: 18 }}>🧪</Text>
+        <Text style={styles.linkCardText}>Lab</Text>
+        <Text style={styles.linkCardChevron}>›</Text>
+      </TouchableOpacity>
+
+      {(user?.role === 'admin' || user?.role === 'superadmin') && (
+        <TouchableOpacity style={[styles.linkCard, { marginTop: 10 }]} onPress={() => navigation.navigate('User')}>
+          <Text style={{ fontSize: 18 }}>👥</Text>
+          <Text style={styles.linkCardText}>Kelola Staf</Text>
+          <Text style={styles.linkCardChevron}>›</Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   )
 }

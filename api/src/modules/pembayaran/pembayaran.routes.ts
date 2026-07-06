@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { authenticate, requireRole } from '../../middleware/auth'
 import { sendWhatsapp, msgPaymentReceipt } from '../notif/wa.service'
+import { awardLoyaltyPoints } from '../../lib/loyalty'
 
 const createSchema = z.object({
   checkUpResultId: z.string(),
@@ -232,6 +233,31 @@ export async function pembayaranRoutes(app: FastifyInstance) {
           patientId: checkUpFull?.registration?.patientId ?? undefined,
           branchId:  req.authUser.branchId,
           userId:    req.authUser.userId,
+        }).catch(() => {})
+      }
+
+      // Poin loyalty (non-blocking, no-op kalau program loyalty cabang ini tidak aktif)
+      const ownerId = checkUpFull?.registration?.patient?.ownerId
+      if (ownerId) {
+        const paymentForLoyalty = await app.prisma.listOfPayment.findUnique({
+          where: { id: payment.id },
+          include: {
+            paymentItems: { include: { detailItemPatient: { select: { priceOverall: true } } } },
+            paymentServices: { include: { detailServicePatient: { select: { priceOverall: true } } } },
+          },
+        })
+        const itemsTotal = (paymentForLoyalty?.paymentItems ?? []).reduce(
+          (s: number, i: any) => s + Number(i.detailItemPatient?.priceOverall ?? 0), 0)
+        const servicesTotal = (paymentForLoyalty?.paymentServices ?? []).reduce(
+          (s: number, sv: any) => s + Number(sv.detailServicePatient?.priceOverall ?? 0), 0)
+        const totalPaid = itemsTotal + servicesTotal - Number(paymentForLoyalty?.discount ?? 0)
+        awardLoyaltyPoints(app.prisma, {
+          ownerId,
+          branchId: req.authUser.branchId,
+          tenantId: req.authUser.tenantId ?? null,
+          totalPaid,
+          description: `Pembayaran INV-${payment.id}`,
+          refId: payment.id.toString(),
         }).catch(() => {})
       }
     } catch {}

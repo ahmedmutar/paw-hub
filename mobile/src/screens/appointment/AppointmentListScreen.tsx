@@ -32,6 +32,13 @@ interface Appointment {
   doctor?: { fullname: string } | null
 }
 
+interface Stats {
+  pending: number
+  today: number
+  total: number
+  confirmed: number
+}
+
 const STATUS_LABEL: Record<string, string> = {
   pending: 'Menunggu',
   confirmed: 'Dikonfirmasi',
@@ -62,6 +69,13 @@ export default function AppointmentListScreen() {
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [stats, setStats] = useState<Stats | null>(null)
+
+  const fetchStats = useCallback(() => api.get('/appointment/stats').then((res) => setStats(res.data.data)), [])
+
+  useEffect(() => {
+    fetchStats()
+  }, [fetchStats])
 
   const fetchPage = useCallback(
     async (pageNum: number, append: boolean) => {
@@ -88,7 +102,7 @@ export default function AppointmentListScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true)
-    await fetchPage(1, false)
+    await Promise.all([fetchPage(1, false), fetchStats()])
     setRefreshing(false)
   }
 
@@ -104,6 +118,28 @@ export default function AppointmentListScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Janji Temu</Text>
       </View>
+
+      {stats && (
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{stats.pending}</Text>
+            <Text style={styles.statLabel}>Menunggu</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{stats.confirmed}</Text>
+            <Text style={styles.statLabel}>Dikonfirmasi</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{stats.today}</Text>
+            <Text style={styles.statLabel}>Hari Ini</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{stats.total}</Text>
+            <Text style={styles.statLabel}>Total</Text>
+          </View>
+        </View>
+      )}
+
       <View style={styles.content}>
         <SearchBar value={search} onChangeText={setSearch} placeholder="Cari nama pemilik, hewan, no. HP..." />
       </View>
@@ -173,7 +209,11 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.warmBg },
   header: { paddingTop: 60, paddingHorizontal: 18, paddingBottom: 4 },
   title: { fontSize: 22, fontWeight: '800', color: colors.textDark },
-  content: { paddingHorizontal: 18 },
+  statsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 18, marginTop: 10, marginBottom: 4 },
+  statCard: { flex: 1, backgroundColor: colors.card, borderRadius: 12, padding: 10, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center' },
+  statValue: { fontSize: 17, fontWeight: '800', color: colors.textDark },
+  statLabel: { fontSize: 10, fontWeight: '600', color: colors.textSoft, marginTop: 2, textAlign: 'center' },
+  content: { paddingHorizontal: 18, marginTop: 8 },
   filterRow: { flexGrow: 0, marginBottom: 12 },
   filterChip: {
     paddingHorizontal: 14,

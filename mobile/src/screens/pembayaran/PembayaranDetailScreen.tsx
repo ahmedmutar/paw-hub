@@ -42,7 +42,7 @@ interface DetailMedGroup {
 interface Tagihan {
   id: string
   diagnosa?: string
-  registration: { patient: { petName: string; owner: { ownerName: string } } }
+  registration: { patient: { petName: string; owner: { id: string; ownerName: string } } }
   doctor: { fullname: string }
   detailItems: DetailItem[]
   detailServices: DetailService[]
@@ -54,6 +54,18 @@ interface PaymentMethod {
   id: string
   methodName: string
 }
+
+interface LoyaltyMember {
+  totalPoints: number
+  tier: 'basic' | 'silver' | 'gold'
+}
+
+interface LoyaltyData {
+  member: LoyaltyMember | null
+  config: { isActive: boolean; redeemRate: number }
+}
+
+const tierLabel: Record<string, string> = { basic: 'Basic', silver: 'Silver', gold: 'Gold' }
 
 const fmt = (n: number) =>
   n.toLocaleString('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 })
@@ -69,6 +81,9 @@ export default function PembayaranDetailScreen() {
   const [discount, setDiscount] = useState('0')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [loyalty, setLoyalty] = useState<LoyaltyData | null>(null)
+  const [redeemPoints, setRedeemPoints] = useState('')
+  const [redeeming, setRedeeming] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -79,9 +94,35 @@ export default function PembayaranDetailScreen() {
       .then(([tagihanRes, methodsRes]) => {
         setTagihan(tagihanRes.data.data)
         setMethods(methodsRes.data.data)
+        const ownerId = tagihanRes.data.data?.registration?.patient?.owner?.id
+        if (ownerId) {
+          api
+            .get(`/loyalty/member/${ownerId}`)
+            .then((res) => setLoyalty(res.data.data))
+            .catch(() => {})
+        }
       })
       .finally(() => setLoading(false))
   }, [checkUpId])
+
+  const handleRedeem = async () => {
+    const ownerId = tagihan?.registration.patient.owner.id
+    const pts = Number(redeemPoints)
+    if (!ownerId || !pts || pts <= 0) return
+    setRedeeming(true)
+    try {
+      const res = await api.post('/loyalty/redeem', { ownerId, points: pts })
+      const { discountValue, newBalance, tier } = res.data.data
+      setDiscount((prev) => String((Number(prev) || 0) + discountValue))
+      setLoyalty((prev) => (prev ? { ...prev, member: { totalPoints: newBalance, tier } } : prev))
+      setRedeemPoints('')
+      Alert.alert('Berhasil', `${pts} poin ditukar menjadi diskon ${fmt(discountValue)}.`)
+    } catch (err: any) {
+      Alert.alert('Gagal', err.response?.data?.message ?? 'Terjadi kesalahan.')
+    } finally {
+      setRedeeming(false)
+    }
+  }
 
   const discountNum = Number(discount) || 0
   const total = Math.max((tagihan?.subtotal ?? 0) - discountNum, 0)
@@ -187,6 +228,34 @@ export default function PembayaranDetailScreen() {
           <Text style={styles.subtotalValue}>{fmt(tagihan.subtotal)}</Text>
         </View>
       </View>
+
+      {loyalty?.config.isActive && (
+        <View style={styles.card}>
+          <View style={styles.lineRow}>
+            <Text style={styles.sectionTitle}>Poin Loyalty</Text>
+            <Text style={styles.tierBadgeText}>{tierLabel[loyalty.member?.tier ?? 'basic']}</Text>
+          </View>
+          <Text style={styles.pointsValue}>{loyalty.member?.totalPoints ?? 0} poin</Text>
+          <Text style={styles.metaText}>1 poin = {fmt(loyalty.config.redeemRate)} diskon</Text>
+          <View style={styles.redeemRow}>
+            <TextInput
+              style={[styles.input, { flex: 1 }]}
+              value={redeemPoints}
+              onChangeText={setRedeemPoints}
+              keyboardType="number-pad"
+              placeholder="Jumlah poin ditukar"
+              placeholderTextColor={colors.textSoft}
+            />
+            <TouchableOpacity
+              style={[styles.redeemBtn, (!redeemPoints || redeeming) && { opacity: 0.5 }]}
+              onPress={handleRedeem}
+              disabled={!redeemPoints || redeeming}
+            >
+              {redeeming ? <ActivityIndicator color="#fff" /> : <Text style={styles.redeemBtnText}>Tukar</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Metode Pembayaran</Text>
@@ -294,4 +363,9 @@ const styles = StyleSheet.create({
   payBtn: { backgroundColor: colors.green, paddingVertical: 15, borderRadius: 12, alignItems: 'center' },
   payBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   emptyText: { fontSize: 13, fontWeight: '600', color: colors.textSoft },
+  tierBadgeText: { fontSize: 11, fontWeight: '800', color: colors.orangeDk, backgroundColor: colors.orangeLt, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  pointsValue: { fontSize: 20, fontWeight: '800', color: colors.textDark, marginTop: 4 },
+  redeemRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  redeemBtn: { backgroundColor: colors.teal, paddingHorizontal: 16, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  redeemBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 })

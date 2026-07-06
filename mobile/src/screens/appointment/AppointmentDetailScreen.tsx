@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, ActivityIndicator, Alert } from 'react-native'
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { format } from 'date-fns'
@@ -44,12 +44,22 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
   cancelled: 'gray',
 }
 
+const TIME_SLOTS = Array.from({ length: 18 }, (_, i) => {
+  const h = 8 + Math.floor(i / 2)
+  const m = i % 2 === 0 ? '00' : '30'
+  return `${String(h).padStart(2, '0')}:${m}`
+})
+
 export default function AppointmentDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AppointmentStackParamList>>()
   const route = useRoute<RouteProp<AppointmentStackParamList, 'AppointmentDetail'>>()
   const [item, setItem] = useState<AppointmentDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [mode, setMode] = useState<'main' | 'decline' | 'reschedule'>('main')
+  const [declineReason, setDeclineReason] = useState('')
+  const [newDate, setNewDate] = useState('')
+  const [newTime, setNewTime] = useState('')
 
   const fetchDetail = () =>
     api.get(`/appointment/${route.params.id}`).then((res) => setItem(res.data.data))
@@ -58,6 +68,13 @@ export default function AppointmentDetailScreen() {
     setLoading(true)
     fetchDetail().finally(() => setLoading(false))
   }, [route.params.id])
+
+  useEffect(() => {
+    if (item) {
+      setNewDate(item.appointmentDate.slice(0, 10))
+      setNewTime(item.appointmentTime)
+    }
+  }, [item])
 
   const runAction = async (action: () => Promise<any>, confirmMsg?: string) => {
     if (confirmMsg) {
@@ -73,6 +90,8 @@ export default function AppointmentDetailScreen() {
     try {
       await action()
       await fetchDetail()
+      setMode('main')
+      setDeclineReason('')
     } catch (err: any) {
       Alert.alert('Gagal', err.response?.data?.message ?? 'Terjadi kesalahan.')
     } finally {
@@ -99,6 +118,7 @@ export default function AppointmentDetailScreen() {
   const canConfirm = item.status === 'pending' || item.status === 'rescheduled'
   const canDecline = !['converted', 'cancelled', 'declined'].includes(item.status)
   const canConvert = (item.status === 'confirmed' || item.status === 'pending') && !!item.patientId
+  const canReschedule = ['pending', 'confirmed', 'rescheduled'].includes(item.status)
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -137,7 +157,7 @@ export default function AppointmentDetailScreen() {
         )}
       </View>
 
-      {(canConfirm || canDecline || canConvert) && (
+      {mode === 'main' && (canConfirm || canDecline || canConvert || canReschedule) && (
         <View style={styles.actionRow}>
           {canConfirm && (
             <TouchableOpacity
@@ -162,20 +182,100 @@ export default function AppointmentDetailScreen() {
               <Text style={styles.actionBtnText}>Jadikan Antrian</Text>
             </TouchableOpacity>
           )}
+          {canReschedule && (
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: colors.purple }]}
+              disabled={actionLoading}
+              onPress={() => setMode('reschedule')}
+            >
+              <Text style={styles.actionBtnText}>Jadwal Ulang</Text>
+            </TouchableOpacity>
+          )}
           {canDecline && (
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: colors.red }]}
+              disabled={actionLoading}
+              onPress={() => setMode('decline')}
+            >
+              <Text style={styles.actionBtnText}>Tolak</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {mode === 'decline' && (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Alasan Penolakan</Text>
+          <TextInput
+            style={[styles.input, { height: 80, textAlignVertical: 'top', marginTop: 8 }]}
+            value={declineReason}
+            onChangeText={setDeclineReason}
+            placeholder="Contoh: dokter sedang cuti, silakan pilih jadwal lain"
+            placeholderTextColor={colors.textSoft}
+            multiline
+          />
+          <View style={[styles.actionRow, { marginTop: 12 }]}>
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: colors.textSoft }]}
+              onPress={() => setMode('main')}
+            >
+              <Text style={styles.actionBtnText}>Batal</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: colors.red }]}
               disabled={actionLoading}
               onPress={() =>
                 runAction(
-                  () => api.put(`/appointment/${item.id}/decline`, {}),
+                  () => api.put(`/appointment/${item.id}/decline`, { reason: declineReason || undefined }),
                   'Tolak janji temu ini?'
                 )
               }
             >
-              <Text style={styles.actionBtnText}>Tolak</Text>
+              <Text style={styles.actionBtnText}>Tolak Booking</Text>
             </TouchableOpacity>
-          )}
+          </View>
+        </View>
+      )}
+
+      {mode === 'reschedule' && (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Tanggal Baru (YYYY-MM-DD)</Text>
+          <TextInput
+            style={[styles.input, { marginTop: 8 }]}
+            value={newDate}
+            onChangeText={setNewDate}
+            placeholder="2026-07-10"
+            placeholderTextColor={colors.textSoft}
+          />
+          <Text style={[styles.sectionTitle, { marginTop: 14 }]}>Jam Baru</Text>
+          <View style={styles.slotWrap}>
+            {TIME_SLOTS.map((t) => (
+              <TouchableOpacity
+                key={t}
+                style={[styles.slotChip, newTime === t && styles.slotChipActive]}
+                onPress={() => setNewTime(t)}
+              >
+                <Text style={[styles.slotChipText, newTime === t && styles.slotChipTextActive]}>{t}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={[styles.actionRow, { marginTop: 14 }]}>
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: colors.textSoft }]}
+              onPress={() => setMode('main')}
+            >
+              <Text style={styles.actionBtnText}>Batal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: colors.purple }]}
+              disabled={actionLoading || !newDate || !newTime}
+              onPress={() =>
+                runAction(() => api.put(`/appointment/${item.id}`, { appointmentDate: newDate, appointmentTime: newTime }))
+              }
+            >
+              <Text style={styles.actionBtnText}>Simpan Jadwal Baru</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </ScrollView>
@@ -206,4 +306,20 @@ const styles = StyleSheet.create({
   actionBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: 'center', minWidth: 100 },
   actionBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   emptyText: { fontSize: 13, fontWeight: '600', color: colors.textSoft },
+  input: {
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.warmBg,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textDark,
+  },
+  slotWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  slotChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.warmBg },
+  slotChipActive: { backgroundColor: colors.purple, borderColor: colors.purple },
+  slotChipText: { fontSize: 12, fontWeight: '700', color: colors.textMid },
+  slotChipTextActive: { color: '#fff' },
 })

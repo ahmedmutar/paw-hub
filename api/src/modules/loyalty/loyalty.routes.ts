@@ -1,32 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { authenticate, requireRole } from '../../middleware/auth'
 import { audit, getIp } from '../../lib/audit'
-
-const DEFAULT_CONFIG = { pointsPerRupiah: 0.001, silverThreshold: 500, goldThreshold: 2000, redeemRate: 100 }
-
-function calcTier(totalPoints: number, cfg: { silverThreshold: number; goldThreshold: number }): string {
-  if (totalPoints >= cfg.goldThreshold) return 'gold'
-  if (totalPoints >= cfg.silverThreshold) return 'silver'
-  return 'basic'
-}
-
-async function getOrCreateMember(prisma: any, ownerId: bigint, branchId: bigint, tenantId: bigint | null) {
-  let member = await prisma.loyaltyMember.findUnique({ where: { ownerId_branchId: { ownerId, branchId } } })
-  if (!member) {
-    member = await prisma.loyaltyMember.create({ data: { ownerId, branchId, tenantId, totalPoints: 0, tier: 'basic', totalSpend: 0 } })
-  }
-  return member
-}
-
-async function getBranchConfig(prisma: any, branchId: bigint) {
-  return await prisma.loyaltyConfig.findUnique({ where: { branchId } }) ?? {
-    pointsPerRupiah: DEFAULT_CONFIG.pointsPerRupiah,
-    silverThreshold: DEFAULT_CONFIG.silverThreshold,
-    goldThreshold: DEFAULT_CONFIG.goldThreshold,
-    redeemRate: DEFAULT_CONFIG.redeemRate,
-    isActive: false,
-  }
-}
+import { awardLoyaltyPoints, calcTier, getLoyaltyBranchConfig as getBranchConfig, getOrCreateLoyaltyMember as getOrCreateMember } from '../../lib/loyalty'
 
 export async function loyaltyRoutes(fastify: FastifyInstance) {
   const prisma = fastify.prisma
@@ -113,33 +88,14 @@ export async function loyaltyRoutes(fastify: FastifyInstance) {
     })
   })
 
-  // POST /loyalty/earn — award points (called internally after payment)
+  // POST /loyalty/earn — award points (manual entry; also called automatically on payment completion, see pembayaran.routes.ts)
   fastify.post('/loyalty/earn', { preHandler: [authenticate, requireRole('admin', 'kasir')] }, async (req: any, reply) => {
     const { ownerId, totalPaid, description, refId } = req.body as { ownerId: string; totalPaid: number; description?: string; refId?: string }
     const { branchId, tenantId } = req.authUser
-    const cfg = await getBranchConfig(prisma, branchId)
-    if (!cfg.isActive) return reply.send({ success: false, message: 'Program loyalty tidak aktif' })
 
-    const ownerBigInt = BigInt(ownerId)
-    const member = await getOrCreateMember(prisma, ownerBigInt, branchId, tenantId)
-    const pts = Math.floor(totalPaid * Number(cfg.pointsPerRupiah))
-    if (pts <= 0) return reply.send({ success: true, pointsEarned: 0 })
-
-    const newBalance = member.totalPoints + pts
-    const newTier = calcTier(newBalance, cfg)
-    const newSpend = Number(member.totalSpend) + totalPaid
-
-    const [, tx] = await prisma.$transaction([
-      prisma.loyaltyMember.update({
-        where: { ownerId_branchId: { ownerId: ownerBigInt, branchId } },
-        data: { totalPoints: newBalance, tier: newTier, totalSpend: newSpend },
-      }),
-      prisma.loyaltyPoint.create({
-        data: { ownerId: ownerBigInt, branchId, tenantId, txType: 'earn', points: pts, balance: newBalance, description: description ?? `Transaksi Rp${totalPaid.toLocaleString()}`, refId },
-      }),
-    ])
-
-    return reply.send({ success: true, data: { pointsEarned: pts, newBalance, tier: newTier, id: tx.id.toString() } })
+    const result = await awardLoyaltyPoints(prisma, { ownerId: BigInt(ownerId), branchId, tenantId, totalPaid, description, refId })
+    if (!result.success) return reply.send({ success: false, message: 'Program loyalty tidak aktif' })
+    return reply.send({ success: true, data: result })
   })
 
   // POST /loyalty/redeem — redeem points for discount
