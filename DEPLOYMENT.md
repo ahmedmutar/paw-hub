@@ -57,10 +57,19 @@ Ulangi langkah ini **dua kali** — sekali untuk UAT, sekali untuk Prod. Bisa du
    MIDTRANS_IS_PRODUCTION=false
    ```
    `PORT` tidak perlu diset manual — Railway inject otomatis, dan kode API sudah baca `process.env.PORT`. **Untuk UAT, tetap pakai Midtrans sandbox** (`MIDTRANS_IS_PRODUCTION=false`) meskipun Prod nanti sudah pakai key production — supaya testing pembayaran di UAT tidak memicu transaksi asli.
-7. Setelah deploy pertama sukses, jalankan seed data awal (superadmin, subscription plans) sekali per environment lewat Railway CLI:
+7. Setelah deploy pertama sukses, jalankan seed data awal (superadmin, subscription plans) sekali per environment. Install Railway CLI (`npm i -g @railway/cli`, lalu `railway login` dan `railway link`) dan jalankan:
    ```bash
    railway run --service <nama-api-service> npm run db:seed
    railway run --service <nama-api-service> npx tsx prisma/seed-plans.ts
+   ```
+   **Catatan penting**: `railway run` menjalankan perintah dari komputer lokal Anda, tapi `DATABASE_URL` bawaan Railway pakai hostname internal (`postgres.railway.internal`) yang **hanya bisa diakses dari dalam jaringan Railway**, bukan dari komputer lokal — perintah di atas akan gagal dengan error "Can't reach database server". Solusinya, ambil URL publik Postgres dulu:
+   ```bash
+   railway variables --service Postgres --kv | grep DATABASE_PUBLIC_URL
+   ```
+   Lalu jalankan seed dengan override manual:
+   ```bash
+   DATABASE_URL="<isi-DATABASE_PUBLIC_URL-di-atas>" npm run db:seed
+   DATABASE_URL="<isi-DATABASE_PUBLIC_URL-di-atas>" npx tsx prisma/seed-plans.ts
    ```
 8. Catat domain publik API dari Railway (**Settings → Networking → Generate Domain**) untuk masing-masing environment, contoh: `https://pawcare-api-uat.up.railway.app` dan `https://pawcare-api.up.railway.app`. Ini yang dipakai frontend sebagai `VITE_API_URL`.
 
