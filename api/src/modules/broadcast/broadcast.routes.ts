@@ -142,8 +142,10 @@ export async function broadcastRoutes(fastify: FastifyInstance) {
     preHandler: [authenticate, requireRole('admin')],
   }, async (req: any, reply) => {
     const id = BigInt(req.params.id)
-    const log = await prisma.broadcastLog.findUnique({
-      where: { id },
+    const { branchId, role } = req.authUser
+    const where: any = role === 'superadmin' ? { id } : { id, branchId }
+    const log = await prisma.broadcastLog.findFirst({
+      where,
       include: {
         user: { select: { fullname: true } },
         recipients: { orderBy: { sentAt: 'desc' }, take: 100, include: { owner: { select: { ownerName: true } } } },
