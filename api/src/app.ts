@@ -66,6 +66,23 @@ const app = Fastify({
   },
 })
 
+const isProduction = process.env.NODE_ENV === 'production'
+
+// Fail fast di production kalau secret/CORS belum dikonfigurasi dengan benar,
+// daripada diam-diam fallback ke nilai yang tidak aman.
+if (isProduction) {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    throw new Error(
+      'JWT_SECRET wajib diisi (minimal 32 karakter) di production. Set env var JWT_SECRET sebelum menjalankan server.'
+    )
+  }
+  if (!process.env.FRONTEND_URL) {
+    throw new Error(
+      'FRONTEND_URL wajib diisi di production supaya CORS tidak mengizinkan origin manapun. Set env var FRONTEND_URL sebelum menjalankan server.'
+    )
+  }
+}
+
 async function bootstrap() {
   await app.register(helmet, { contentSecurityPolicy: false })
 
