@@ -233,6 +233,12 @@ export default function DashboardScreen() {
         <Text style={styles.linkCardText}>Cabang</Text>
         <Text style={styles.linkCardChevron}>›</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity style={[styles.linkCard, { marginTop: 10 }]} onPress={() => navigation.navigate('Layanan')}>
+        <Text style={{ fontSize: 18 }}>🩺</Text>
+        <Text style={styles.linkCardText}>Layanan</Text>
+        <Text style={styles.linkCardChevron}>›</Text>
+      </TouchableOpacity>
     </ScrollView>
   )
 }

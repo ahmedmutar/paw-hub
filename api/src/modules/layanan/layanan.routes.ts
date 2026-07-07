@@ -67,6 +67,11 @@ export async function layananRoutes(app: FastifyInstance) {
     const body = categorySchema.safeParse(req.body)
     if (!body.success) return reply.status(400).send({ message: 'Input tidak valid.' })
 
+    const existing = await app.prisma.serviceCategory.findFirst({
+      where: { id: BigInt(id), branchId: req.authUser.branchId, isDeleted: false },
+    })
+    if (!existing) return reply.status(404).send({ message: 'Kategori tidak ditemukan.' })
+
     const category = await app.prisma.serviceCategory.update({
       where: { id: BigInt(id) },
       data:  { categoryName: body.data.categoryName },
@@ -79,6 +84,11 @@ export async function layananRoutes(app: FastifyInstance) {
     preHandler: [authenticate, requireRole('admin')],
   }, async (req, reply) => {
     const { id } = req.params as { id: string }
+
+    const existingCategory = await app.prisma.serviceCategory.findFirst({
+      where: { id: BigInt(id), branchId: req.authUser.branchId, isDeleted: false },
+    })
+    if (!existingCategory) return reply.status(404).send({ message: 'Kategori tidak ditemukan.' })
 
     const activeServices = await app.prisma.listOfService.count({
       where: { serviceCategoryId: BigInt(id), isDeleted: false },
@@ -197,7 +207,7 @@ export async function layananRoutes(app: FastifyInstance) {
     const { id } = req.params as { id: string }
 
     const service = await app.prisma.listOfService.findFirst({
-      where: { id: BigInt(id), isDeleted: false },
+      where: { id: BigInt(id), branchId: req.authUser.branchId, isDeleted: false },
       include: {
         serviceCategory: { select: { id: true, categoryName: true } },
         priceServices: {
@@ -256,6 +266,11 @@ export async function layananRoutes(app: FastifyInstance) {
     const body   = serviceSchema.partial().safeParse(req.body)
     if (!body.success) return reply.status(400).send({ message: 'Input tidak valid.' })
 
+    const existingService = await app.prisma.listOfService.findFirst({
+      where: { id: BigInt(id), branchId: req.authUser.branchId, isDeleted: false },
+    })
+    if (!existingService) return reply.status(404).send({ message: 'Layanan tidak ditemukan.' })
+
     const service = await app.prisma.listOfService.update({
       where: { id: BigInt(id) },
       data: {
@@ -273,7 +288,9 @@ export async function layananRoutes(app: FastifyInstance) {
     preHandler: [authenticate, requireRole('admin')],
   }, async (req, reply) => {
     const { id } = req.params as { id: string }
-    const service = await app.prisma.listOfService.findUnique({ where: { id: BigInt(id) } })
+    const service = await app.prisma.listOfService.findFirst({
+      where: { id: BigInt(id), branchId: req.authUser.branchId, isDeleted: false },
+    })
     if (!service) return reply.status(404).send({ message: 'Layanan tidak ditemukan.' })
 
     const updated = await app.prisma.listOfService.update({
@@ -291,6 +308,11 @@ export async function layananRoutes(app: FastifyInstance) {
     preHandler: [authenticate, requireRole('admin')],
   }, async (req, reply) => {
     const { id } = req.params as { id: string }
+
+    const existingService = await app.prisma.listOfService.findFirst({
+      where: { id: BigInt(id), branchId: req.authUser.branchId, isDeleted: false },
+    })
+    if (!existingService) return reply.status(404).send({ message: 'Layanan tidak ditemukan.' })
 
     const inUse = await app.prisma.detailServicePatient.count({
       where: { priceService: { listOfServiceId: BigInt(id) } },
@@ -320,6 +342,11 @@ export async function layananRoutes(app: FastifyInstance) {
       return reply.status(400).send({ message: 'Fee dokter tidak boleh melebihi harga jual.' })
     }
 
+    const existingService = await app.prisma.listOfService.findFirst({
+      where: { id: BigInt(id), branchId: req.authUser.branchId, isDeleted: false },
+    })
+    if (!existingService) return reply.status(404).send({ message: 'Layanan tidak ditemukan.' })
+
     const price = await app.prisma.$transaction(async (tx) => {
       // Soft-delete harga lama
       await tx.priceService.updateMany({
@@ -344,6 +371,11 @@ export async function layananRoutes(app: FastifyInstance) {
   // GET riwayat harga
   app.get('/layanan/:id/harga', { preHandler: authenticate }, async (req, reply) => {
     const { id } = req.params as { id: string }
+
+    const existingService = await app.prisma.listOfService.findFirst({
+      where: { id: BigInt(id), branchId: req.authUser.branchId, isDeleted: false },
+    })
+    if (!existingService) return reply.status(404).send({ message: 'Layanan tidak ditemukan.' })
 
     const history = await app.prisma.priceService.findMany({
       where:   { listOfServiceId: BigInt(id) },
