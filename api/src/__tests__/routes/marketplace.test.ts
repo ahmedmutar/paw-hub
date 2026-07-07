@@ -64,3 +64,73 @@ describe('F-42 Integrasi Marketplace', () => {
     await app.close()
   })
 })
+
+// ─── Isolasi antar-cabang (IDOR) ────────────────────────────────────────────────
+// Modul ini secara konsisten scope semua endpoint list/stats pakai branchId
+// langsung (bukan tenant-wide seperti modul lain), jadi fix untuk endpoint
+// by-id harus ikut pola yang sama: dikunci ke branchId milik admin sendiri.
+const OTHER_BRANCH_INTEGRATION = { id: BigInt(2), platform: 'shopee', shopName: 'Toko Lain', shopId: '999', syncEnabled: true, branchId: BigInt(2) }
+const OTHER_BRANCH_ORDER = { id: BigInt(2), orderId: 'TK-002', platform: 'tokopedia', customerName: 'Orang Lain', totalAmount: 50000, status: 'pending', integrationId: BigInt(2), integration: OTHER_BRANCH_INTEGRATION }
+
+describe('marketplace.routes — isolasi antar-cabang (IDOR)', () => {
+  it('DELETE /:id/disconnect milik cabang lain harus 404, bukan berhasil diputus', async () => {
+    const { marketplaceRoutes } = await import('../../modules/marketplace/marketplace.routes')
+    const updateMock = vi.fn().mockResolvedValue({ ...OTHER_BRANCH_INTEGRATION, syncEnabled: false })
+    const prisma = fullMockPrisma({
+      marketplaceIntegration: { findFirst: vi.fn().mockResolvedValue(null), update: updateMock },
+    })
+    const app = await buildApp(marketplaceRoutes, prisma)
+
+    const res = await app.inject({ method: 'DELETE', url: '/api/marketplace/2/disconnect' })
+
+    expect(res.statusCode).toBe(404)
+    expect(updateMock).not.toHaveBeenCalled()
+    await app.close()
+  })
+
+  it('POST /:id/sync milik cabang lain harus 404, bukan bikin order palsu', async () => {
+    const { marketplaceRoutes } = await import('../../modules/marketplace/marketplace.routes')
+    const createMock = vi.fn().mockResolvedValue({ id: BigInt(99) })
+    const prisma = fullMockPrisma({
+      marketplaceIntegration: { findFirst: vi.fn().mockResolvedValue(null) },
+      marketplaceOrder: { create: createMock },
+    })
+    const app = await buildApp(marketplaceRoutes, prisma)
+
+    const res = await app.inject({ method: 'POST', url: '/api/marketplace/2/sync', payload: {} })
+
+    expect(res.statusCode).toBe(404)
+    expect(createMock).not.toHaveBeenCalled()
+    await app.close()
+  })
+
+  it('PATCH /orders/:id milik cabang lain harus 404, bukan berhasil ubah status', async () => {
+    const { marketplaceRoutes } = await import('../../modules/marketplace/marketplace.routes')
+    const updateMock = vi.fn().mockResolvedValue({ ...OTHER_BRANCH_ORDER, status: 'completed' })
+    const prisma = fullMockPrisma({
+      marketplaceOrder: { findFirst: vi.fn().mockResolvedValue(null), update: updateMock },
+    })
+    const app = await buildApp(marketplaceRoutes, prisma)
+
+    const res = await app.inject({ method: 'PATCH', url: '/api/marketplace/orders/2', payload: { status: 'completed' } })
+
+    expect(res.statusCode).toBe(404)
+    expect(updateMock).not.toHaveBeenCalled()
+    await app.close()
+  })
+
+  it('PATCH /orders/:id milik cabang sendiri tetap berhasil (kontrol positif)', async () => {
+    const { marketplaceRoutes } = await import('../../modules/marketplace/marketplace.routes')
+    const updateMock = vi.fn().mockResolvedValue({ ...mockOrder, status: 'completed' })
+    const prisma = fullMockPrisma({
+      marketplaceOrder: { findFirst: vi.fn().mockResolvedValue(mockOrder), update: updateMock },
+    })
+    const app = await buildApp(marketplaceRoutes, prisma)
+
+    const res = await app.inject({ method: 'PATCH', url: '/api/marketplace/orders/1', payload: { status: 'completed' } })
+
+    expect(res.statusCode).toBe(200)
+    expect(updateMock).toHaveBeenCalled()
+    await app.close()
+  })
+})

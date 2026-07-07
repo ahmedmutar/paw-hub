@@ -37,6 +37,7 @@ import CabangListScreen from '../screens/cabang/CabangListScreen'
 import CabangDetailScreen from '../screens/cabang/CabangDetailScreen'
 import LayananScreen from '../screens/layanan/LayananScreen'
 import PengeluaranScreen from '../screens/pengeluaran/PengeluaranScreen'
+import MarketplaceScreen from '../screens/marketplace/MarketplaceScreen'
 import { colors } from '../theme'
 
 export type RootStackParamList = {
@@ -64,6 +65,7 @@ export type RootStackParamList = {
   CabangDetail: { id: string }
   Layanan: undefined
   Pengeluaran: undefined
+  Marketplace: undefined
 }
 
 export type PasienStackParamList = {
@@ -204,6 +206,7 @@ export default function RootNavigator() {
         <RootStack.Screen name="CabangDetail" component={CabangDetailScreen} />
         <RootStack.Screen name="Layanan" component={LayananScreen} />
         <RootStack.Screen name="Pengeluaran" component={PengeluaranScreen} />
+        <RootStack.Screen name="Marketplace" component={MarketplaceScreen} />
       </RootStack.Navigator>
     </NavigationContainer>
   )

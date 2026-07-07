@@ -32,7 +32,11 @@ export async function marketplaceRoutes(app: FastifyInstance) {
 
   // Disconnect
   app.delete('/marketplace/:id/disconnect', { preHandler: [authenticate, requireRole('admin')] }, async (req: any, reply) => {
+    const { branchId } = req.authUser
     const id = BigInt(req.params.id)
+    const existing = await req.server.prisma.marketplaceIntegration.findFirst({ where: { id, branchId } })
+    if (!existing) return reply.status(404).send({ message: 'Integrasi tidak ditemukan' })
+
     await req.server.prisma.marketplaceIntegration.update({
       where: { id },
       data: { syncEnabled: false, accessToken: null },
@@ -42,8 +46,9 @@ export async function marketplaceRoutes(app: FastifyInstance) {
 
   // Sync stock (mock — buat contoh orders)
   app.post('/marketplace/:id/sync', { preHandler: [authenticate, requireRole('admin')] }, async (req: any, reply) => {
+    const { branchId } = req.authUser
     const id = BigInt(req.params.id)
-    const integration = await req.server.prisma.marketplaceIntegration.findUnique({ where: { id } })
+    const integration = await req.server.prisma.marketplaceIntegration.findFirst({ where: { id, branchId } })
     if (!integration) return reply.status(404).send({ message: 'Integrasi tidak ditemukan' })
     if (!integration.syncEnabled) return reply.status(400).send({ message: 'Integrasi tidak aktif' })
 
@@ -98,8 +103,13 @@ export async function marketplaceRoutes(app: FastifyInstance) {
 
   // Update order status
   app.patch('/marketplace/orders/:id', { preHandler: [authenticate, requireRole('admin')] }, async (req: any, reply) => {
+    const { branchId } = req.authUser
     const id = BigInt(req.params.id)
     const { status } = req.body as any
+
+    const existing = await req.server.prisma.marketplaceOrder.findFirst({ where: { id, integration: { branchId } } })
+    if (!existing) return reply.status(404).send({ message: 'Pesanan tidak ditemukan' })
+
     const order = await req.server.prisma.marketplaceOrder.update({ where: { id }, data: { status } })
     return reply.send({ data: order })
   })
