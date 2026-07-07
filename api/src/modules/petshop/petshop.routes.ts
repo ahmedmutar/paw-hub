@@ -5,10 +5,21 @@ export async function petshopRoutes(app: FastifyInstance) {
 
   // ─── Helper ──────────────────────────────────────────────────────────────────
 
+  // Admin dikunci ke seluruh cabang di tenant-nya (bukan `{}` kosong — itu bocor
+  // lintas tenant), non-admin dikunci ke cabang sendiri.
   function branchFilter(user: any, qBranch?: string) {
-    if (user.role === 'admin' && qBranch) return { branchId: BigInt(qBranch) }
-    if (user.role !== 'admin') return { branchId: BigInt(user.branchId) }
-    return {}
+    if (user.role === 'admin') {
+      if (qBranch) return { branchId: BigInt(qBranch), branch: { tenantId: BigInt(user.tenantId) } }
+      return { branch: { tenantId: BigInt(user.tenantId) } }
+    }
+    return { branchId: BigInt(user.branchId) }
+  }
+
+  // PaymentPetshop tidak punya branchId langsung — scope lewat relasi user.
+  function trxUserFilter(user: any) {
+    return user.role === 'admin'
+      ? { user: { branch: { tenantId: BigInt(user.tenantId) } } }
+      : { user: { branchId: BigInt(user.branchId) } }
   }
 
   // ─── PRODUK ──────────────────────────────────────────────────────────────────
@@ -46,10 +57,11 @@ export async function petshopRoutes(app: FastifyInstance) {
   })
 
   app.get('/petshop/produk/:id', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
 
     const product = await app.prisma.listOfItemPetShop.findFirst({
-      where: { id: BigInt(id), isDeleted: false },
+      where: { id: BigInt(id), isDeleted: false, ...branchFilter(user) },
       include: {
         branch: { select: { id: true, branchName: true } },
         priceItemPetShops: {
@@ -71,6 +83,11 @@ export async function petshopRoutes(app: FastifyInstance) {
     if (!itemName || !unitItemId || !categoryItemId || !branchId || !sellingPrice || !capitalPrice) {
       return reply.status(400).send({ message: 'Field wajib tidak lengkap' })
     }
+
+    const targetBranch = await app.prisma.branch.findFirst({
+      where: { id: BigInt(branchId), tenantId: BigInt(user.tenantId) },
+    })
+    if (!targetBranch) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
 
     const product = await app.prisma.listOfItemPetShop.create({
       data: {
@@ -99,11 +116,12 @@ export async function petshopRoutes(app: FastifyInstance) {
   })
 
   app.put('/petshop/produk/:id', { preHandler: [authenticate, requireRole('admin')] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
     const { itemName, unitItemId, categoryItemId, limitItem, expiredDate } = req.body as any
 
     const existing = await app.prisma.listOfItemPetShop.findFirst({
-      where: { id: BigInt(id), isDeleted: false },
+      where: { id: BigInt(id), isDeleted: false, ...branchFilter(user) },
     })
     if (!existing) return reply.status(404).send({ message: 'Produk tidak ditemukan' })
 
@@ -126,8 +144,9 @@ export async function petshopRoutes(app: FastifyInstance) {
   })
 
   app.delete('/petshop/produk/:id', { preHandler: [authenticate, requireRole('admin')] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
-    const existing = await app.prisma.listOfItemPetShop.findFirst({ where: { id: BigInt(id), isDeleted: false } })
+    const existing = await app.prisma.listOfItemPetShop.findFirst({ where: { id: BigInt(id), isDeleted: false, ...branchFilter(user) } })
     if (!existing) return reply.status(404).send({ message: 'Produk tidak ditemukan' })
 
     await app.prisma.listOfItemPetShop.update({
@@ -141,12 +160,13 @@ export async function petshopRoutes(app: FastifyInstance) {
 
   // Tambah stok masuk (mutasi manual)
   app.post('/petshop/produk/:id/stok', { preHandler: [authenticate, requireRole('admin')] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
     const { qty, type } = req.body as any // type: 'masuk' | 'keluar'
 
     if (!qty || !type) return reply.status(400).send({ message: 'qty dan type wajib diisi' })
 
-    const product = await app.prisma.listOfItemPetShop.findFirst({ where: { id: BigInt(id), isDeleted: false } })
+    const product = await app.prisma.listOfItemPetShop.findFirst({ where: { id: BigInt(id), isDeleted: false, ...branchFilter(user) } })
     if (!product) return reply.status(404).send({ message: 'Produk tidak ditemukan' })
 
     const delta = type === 'masuk' ? Number(qty) : -Number(qty)
@@ -165,7 +185,13 @@ export async function petshopRoutes(app: FastifyInstance) {
   // ─── HARGA ───────────────────────────────────────────────────────────────────
 
   app.get('/petshop/harga/:produkId', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { produkId } = req.params as any
+
+    const product = await app.prisma.listOfItemPetShop.findFirst({
+      where: { id: BigInt(produkId), isDeleted: false, ...branchFilter(user) },
+    })
+    if (!product) return reply.status(404).send({ message: 'Produk tidak ditemukan' })
 
     const prices = await app.prisma.priceItemPetShop.findMany({
       where: { listOfItemPetShopId: BigInt(produkId), isDeleted: false },
@@ -176,12 +202,18 @@ export async function petshopRoutes(app: FastifyInstance) {
   })
 
   app.post('/petshop/harga/:produkId', { preHandler: [authenticate, requireRole('admin')] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { produkId } = req.params as any
     const { sellingPrice, capitalPrice, petshopFee } = req.body as any
 
     if (!sellingPrice || !capitalPrice) {
       return reply.status(400).send({ message: 'sellingPrice dan capitalPrice wajib diisi' })
     }
+
+    const product = await app.prisma.listOfItemPetShop.findFirst({
+      where: { id: BigInt(produkId), isDeleted: false, ...branchFilter(user) },
+    })
+    if (!product) return reply.status(404).send({ message: 'Produk tidak ditemukan' })
 
     const price = await app.prisma.priceItemPetShop.create({
       data: {
@@ -206,15 +238,7 @@ export async function petshopRoutes(app: FastifyInstance) {
       ? { createdAt: { gte: new Date(startDate), lte: new Date(endDate + 'T23:59:59') } }
       : {}
 
-    // PaymentPetshop has no branchId — filter via userId/user's branch
-    // For branch-specific filtering: get users of branch first, or accept all for admin
-    const userFilter = user.role !== 'admin'
-      ? {
-          user: {
-            branchId: BigInt(user.branchId),
-          },
-        }
-      : {}
+    const userFilter = trxUserFilter(user)
 
     const [transactions, total] = await Promise.all([
       app.prisma.paymentPetshop.findMany({
@@ -250,10 +274,11 @@ export async function petshopRoutes(app: FastifyInstance) {
   })
 
   app.get('/petshop/transaksi/:id', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
 
     const trx = await app.prisma.paymentPetshop.findFirst({
-      where: { id: BigInt(id), isDeleted: false },
+      where: { id: BigInt(id), isDeleted: false, ...trxUserFilter(user) },
       include: {
         user: { select: { id: true, fullname: true, branch: { select: { id: true, branchName: true } } } },
         items: {
@@ -347,9 +372,10 @@ export async function petshopRoutes(app: FastifyInstance) {
   })
 
   app.delete('/petshop/transaksi/:id', { preHandler: [authenticate, requireRole('admin')] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
 
-    const trx = await app.prisma.paymentPetshop.findFirst({ where: { id: BigInt(id), isDeleted: false } })
+    const trx = await app.prisma.paymentPetshop.findFirst({ where: { id: BigInt(id), isDeleted: false, ...trxUserFilter(user) } })
     if (!trx) return reply.status(404).send({ message: 'Transaksi tidak ditemukan' })
 
     await app.prisma.paymentPetshop.update({
@@ -365,9 +391,7 @@ export async function petshopRoutes(app: FastifyInstance) {
   app.get('/petshop/stats', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
 
-    const userFilter = user.role !== 'admin'
-      ? { user: { branchId: BigInt(user.branchId) } }
-      : {}
+    const userFilter = trxUserFilter(user)
 
     const now = new Date()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -393,14 +417,14 @@ export async function petshopRoutes(app: FastifyInstance) {
       app.prisma.listOfItemPetShop.count({
         where: {
           isDeleted: false,
-          ...(user.role !== 'admin' ? { branchId: BigInt(user.branchId) } : {}),
+          ...branchFilter(user),
           AND: [{ limitItem: { not: null } }],
         },
       }),
       app.prisma.listOfItemPetShop.count({
         where: {
           isDeleted: false,
-          ...(user.role !== 'admin' ? { branchId: BigInt(user.branchId) } : {}),
+          ...branchFilter(user),
         },
       }),
     ])
