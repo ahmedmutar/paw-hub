@@ -541,6 +541,7 @@ export default function PasienPage() {
             description={search || category ? 'Coba ubah filter pencarian.' : 'Mulai daftarkan pasien pertama.'}
           />
         ) : (
+          <div className="overflow-x-auto">
           <table className="table-base">
             <thead>
               <tr>
@@ -647,6 +648,7 @@ export default function PasienPage() {
               })}
             </tbody>
           </table>
+          </div>
         )}
 
         {/* Pagination */}

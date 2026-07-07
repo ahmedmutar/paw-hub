@@ -193,6 +193,7 @@ export default function LabPage() {
           </button>
         </div>
 
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -240,6 +241,7 @@ export default function LabPage() {
             ))}
           </tbody>
         </table>
+        </div>
 
         {res?.total > 20 && (
           <div className="flex items-center justify-between p-4 border-t">

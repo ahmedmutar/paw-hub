@@ -252,6 +252,7 @@ export default function DrugPage() {
                 placeholder="Cari nama obat..." className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm" />
             </div>
           </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr>
@@ -287,6 +288,7 @@ export default function DrugPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

@@ -445,6 +445,7 @@ export default function UserPage() {
             description="Coba ubah filter atau tambah user baru."
           />
         ) : (
+          <div className="overflow-x-auto">
           <table className="table-base">
             <thead>
               <tr>
@@ -528,6 +529,7 @@ export default function UserPage() {
               })}
             </tbody>
           </table>
+          </div>
         )}
 
         {/* Pagination */}

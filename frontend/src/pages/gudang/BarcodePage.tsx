@@ -206,6 +206,7 @@ export default function BarcodePage() {
           </button>
         </div>
 
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -253,6 +254,7 @@ export default function BarcodePage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {scanning && <BarcodeScanner onScan={handleScan} onClose={() => setScanning(false)} />}
