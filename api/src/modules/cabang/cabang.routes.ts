@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { authenticate, requireRole } from '../../middleware/auth'
+import { authenticate, requireRole, tenantFilter } from '../../middleware/auth'
 
 const branchSchema = z.object({
   branchCode:         z.string().min(1).max(10).toUpperCase(),
@@ -18,8 +18,8 @@ export async function cabangRoutes(app: FastifyInstance) {
   // GET /cabang — list semua cabang + statistik ringkasan
   app.get('/cabang', { preHandler: authenticate }, async (req, reply) => {
     const { authUser } = req
-    const where = authUser.role === 'admin'
-      ? { isDeleted: false }
+    const where = authUser.role === 'admin' || authUser.role === 'superadmin'
+      ? { isDeleted: false, ...tenantFilter(authUser) }
       : { id: authUser.branchId, isDeleted: false }
 
     const branches = await app.prisma.branch.findMany({
@@ -52,7 +52,7 @@ export async function cabangRoutes(app: FastifyInstance) {
     const { id } = req.params as { id: string }
 
     const branch = await app.prisma.branch.findFirst({
-      where: { id: BigInt(id), isDeleted: false },
+      where: { id: BigInt(id), isDeleted: false, ...tenantFilter(req.authUser) },
     })
     if (!branch) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
 
@@ -82,6 +82,7 @@ export async function cabangRoutes(app: FastifyInstance) {
       data: {
         ...body.data,
         email: body.data.email || undefined,
+        tenantId: req.authUser.tenantId ?? undefined,
       },
     })
     return reply.status(201).send({ message: 'Cabang berhasil ditambahkan.', data: branch })
@@ -95,6 +96,11 @@ export async function cabangRoutes(app: FastifyInstance) {
       return reply.status(400).send({ message: 'Input tidak valid.', errors: body.error.flatten().fieldErrors })
     }
 
+    const existing = await app.prisma.branch.findFirst({
+      where: { id: BigInt(id), isDeleted: false, ...tenantFilter(req.authUser) },
+    })
+    if (!existing) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
+
     const branch = await app.prisma.branch.update({
       where: { id: BigInt(id) },
       data: { ...body.data, email: body.data.email || undefined },
@@ -105,7 +111,9 @@ export async function cabangRoutes(app: FastifyInstance) {
   // PATCH /cabang/:id/toggle-status — aktif/nonaktif
   app.patch('/cabang/:id/toggle-status', { preHandler: [authenticate, requireRole('admin')] }, async (req, reply) => {
     const { id } = req.params as { id: string }
-    const branch = await app.prisma.branch.findUnique({ where: { id: BigInt(id) } })
+    const branch = await app.prisma.branch.findFirst({
+      where: { id: BigInt(id), isDeleted: false, ...tenantFilter(req.authUser) },
+    })
     if (!branch) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
 
     const updated = await app.prisma.branch.update({
@@ -121,6 +129,11 @@ export async function cabangRoutes(app: FastifyInstance) {
   // DELETE /cabang/:id — soft delete
   app.delete('/cabang/:id', { preHandler: [authenticate, requireRole('admin')] }, async (req, reply) => {
     const { id } = req.params as { id: string }
+    const existing = await app.prisma.branch.findFirst({
+      where: { id: BigInt(id), isDeleted: false, ...tenantFilter(req.authUser) },
+    })
+    if (!existing) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
+
     await app.prisma.branch.update({
       where: { id: BigInt(id) },
       data: { isDeleted: true, isActive: false },
