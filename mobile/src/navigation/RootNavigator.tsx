@@ -33,6 +33,8 @@ import LabResultScreen from '../screens/lab/LabResultScreen'
 import LabHistoryScreen from '../screens/lab/LabHistoryScreen'
 import UserListScreen, { StaffUser } from '../screens/user/UserListScreen'
 import UserDetailScreen from '../screens/user/UserDetailScreen'
+import CabangListScreen from '../screens/cabang/CabangListScreen'
+import CabangDetailScreen from '../screens/cabang/CabangDetailScreen'
 import { colors } from '../theme'
 
 export type RootStackParamList = {
@@ -56,6 +58,8 @@ export type RootStackParamList = {
   LabResult: { id: string }
   User: undefined
   UserDetail: { user: StaffUser }
+  Cabang: undefined
+  CabangDetail: { id: string }
 }
 
 export type PasienStackParamList = {
@@ -192,6 +196,8 @@ export default function RootNavigator() {
         <RootStack.Screen name="LabResult" component={LabResultScreen} />
         <RootStack.Screen name="User" component={UserListScreen} />
         <RootStack.Screen name="UserDetail" component={UserDetailScreen} />
+        <RootStack.Screen name="Cabang" component={CabangListScreen} />
+        <RootStack.Screen name="CabangDetail" component={CabangDetailScreen} />
       </RootStack.Navigator>
     </NavigationContainer>
   )

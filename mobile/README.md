@@ -65,7 +65,10 @@ Modul back-office (prioritas tinggi — sering dicek dari HP):
   - Ada di mobile: lihat daftar staf (cari + filter role/status), lihat detail, edit info kontak non-sensitif (nama/email/no.HP/alamat — TIDAK termasuk role/username/cabang meski API sebenarnya izinkan ubah role), toggle aktif/nonaktif (reversibel, low-risk), reset password (dengan konfirmasi eksplisit + peringatan bahwa sesi aktif akan terhapus).
   - **Sengaja TIDAK ada di mobile**: buat akun staf baru, hapus akun, ubah role/cabang — semua ini tetap harus lewat web. Alasan: ini aksi bernilai tinggi/sulit dibalik (privilege escalation, penerbitan kredensial baru) yang lebih aman dikerjakan di lingkungan yang lebih terkontrol.
 
-Modul back-office prioritas sedang/rendah (Cabang, Layanan, Broadcast WA, Billing, Pajak, Penggajian, Pengeluaran, Marketplace, Petshop, Audit log, Analytics/BI, Calendar sync) — belum dikerjakan, lebih cocok dikerjakan di web/desktop atau menunggu prioritas eksplisit.
+Modul back-office prioritas sedang/rendah:
+- [x] Cabang — **bug kebocoran data antar-tenant ditemukan & diperbaiki**: `GET /cabang` untuk role admin tidak filter berdasarkan tenant sama sekali (admin satu klinik bisa lihat semua cabang klinik lain), `POST /cabang` tidak set `tenantId` saat buat cabang baru, dan endpoint `PUT`/`PATCH toggle-status`/`DELETE` tidak verifikasi kepemilikan tenant sebelum ubah/hapus (IDOR). Diperbaiki di `api/src/modules/cabang/cabang.routes.ts` pakai helper `tenantFilter()` yang sudah dipakai konsisten di modul lain.
+  - Mobile: **read-only** (lihat daftar cabang + detail dengan statistik & daftar staf) — sengaja tidak ada buat/edit/hapus di mobile karena itu konfigurasi tingkat tenant yang jarang diubah, lebih aman lewat web. Akses dari Dashboard, semua role (backend sudah otomatis scope non-admin ke cabang sendiri saja).
+- [ ] Layanan, Broadcast WA, Billing, Pajak, Penggajian, Pengeluaran, Marketplace, Petshop, Audit log, Analytics/BI, Calendar sync — belum dikerjakan, lebih cocok dikerjakan di web/desktop atau menunggu prioritas eksplisit.
 
 ## Mode Ganda: Staf & Pemilik Hewan (Customer Portal)
 
