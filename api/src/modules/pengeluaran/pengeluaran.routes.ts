@@ -11,12 +11,24 @@ export const EXPENSE_CATEGORIES = [
   'Lain-lain',
 ] as const
 
+/**
+ * Filter cabang untuk query Expense: staf non-admin dikunci ke cabang sendiri,
+ * admin dikunci ke seluruh cabang di tenant-nya (bukan `{}` kosong — itu bocor
+ * lintas tenant karena model Expense tidak punya kolom tenantId langsung,
+ * cuma relasi lewat branch).
+ */
+function expenseBranchFilter(user: any) {
+  return user.role === 'admin'
+    ? { branch: { tenantId: BigInt(user.tenantId) } }
+    : { branchId: BigInt(user.branchId) }
+}
+
 export async function pengeluaranRoutes(app: FastifyInstance) {
 
   // ─── Stats ──────────────────────────────────────────────────────────────────
   app.get('/pengeluaran/stats', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
+    const branchFilter = expenseBranchFilter(user)
 
     const now = new Date()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -81,7 +93,7 @@ export async function pengeluaranRoutes(app: FastifyInstance) {
   // ─── List ────────────────────────────────────────────────────────────────────
   app.get('/pengeluaran', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
+    const branchFilter = expenseBranchFilter(user)
     const { q = '', category, dateFrom, dateTo, page = '1', limit = '20' } = req.query as any
     const skip = (parseInt(page) - 1) * parseInt(limit)
 
@@ -139,6 +151,13 @@ export async function pengeluaranRoutes(app: FastifyInstance) {
     const amt = parseFloat(amount)
     const targetBranchId = user.role === 'admin' ? BigInt(branchId ?? user.branchId) : BigInt(user.branchId)
 
+    if (user.role === 'admin' && branchId) {
+      const targetBranch = await app.prisma.branch.findFirst({
+        where: { id: targetBranchId, tenantId: BigInt(user.tenantId) },
+      })
+      if (!targetBranch) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
+    }
+
     const data = await app.prisma.expense.create({
       data: {
         dateSpend: dateSpend ? new Date(dateSpend) : new Date(),
@@ -160,11 +179,14 @@ export async function pengeluaranRoutes(app: FastifyInstance) {
 
   // ─── Update ──────────────────────────────────────────────────────────────────
   app.put('/pengeluaran/:id', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
     const { dateSpend, category, itemName, notes, quantity, amount } = req.body as any
 
-    const existing = await app.prisma.expense.findUnique({ where: { id: BigInt(id) } })
-    if (!existing || existing.isDeleted) return reply.status(404).send({ message: 'Data tidak ditemukan.' })
+    const existing = await app.prisma.expense.findFirst({
+      where: { id: BigInt(id), isDeleted: false, ...expenseBranchFilter(user) },
+    })
+    if (!existing) return reply.status(404).send({ message: 'Data tidak ditemukan.' })
 
     const qty = quantity != null ? parseFloat(quantity) : Number(existing.quantity)
     const amt = amount != null ? parseFloat(amount) : Number(existing.amount)
@@ -188,9 +210,12 @@ export async function pengeluaranRoutes(app: FastifyInstance) {
 
   // ─── Delete ──────────────────────────────────────────────────────────────────
   app.delete('/pengeluaran/:id', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
-    const existing = await app.prisma.expense.findUnique({ where: { id: BigInt(id) } })
-    if (!existing || existing.isDeleted) return reply.status(404).send({ message: 'Data tidak ditemukan.' })
+    const existing = await app.prisma.expense.findFirst({
+      where: { id: BigInt(id), isDeleted: false, ...expenseBranchFilter(user) },
+    })
+    if (!existing) return reply.status(404).send({ message: 'Data tidak ditemukan.' })
 
     await app.prisma.expense.update({
       where: { id: BigInt(id) },
@@ -202,7 +227,7 @@ export async function pengeluaranRoutes(app: FastifyInstance) {
   // ─── Rekap bulanan (untuk laporan) ───────────────────────────────────────────
   app.get('/pengeluaran/rekap-bulanan', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
+    const branchFilter = expenseBranchFilter(user)
     const { year = new Date().getFullYear().toString() } = req.query as any
 
     const data = await app.prisma.expense.groupBy({
