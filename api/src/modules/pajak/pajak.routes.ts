@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { FastifyInstance } from 'fastify'
-import { authenticate, requireRole } from '../../middleware/auth'
+import { authenticate, requireRole, tenantFilter } from '../../middleware/auth'
 import ExcelJS from 'exceljs'
 
 // PTKP 2024 (annual in IDR)
@@ -65,6 +65,10 @@ export async function pajakRoutes(app: FastifyInstance) {
   app.patch('/pajak/user/:userId/ptkp', { preHandler: [authenticate, requireRole('admin')] }, async (req: any, reply) => {
     const id = BigInt(req.params.userId)
     const { ptkpStatus, npwp } = req.body as any
+
+    const target = await req.server.prisma.user.findFirst({ where: { id, ...tenantFilter(req.authUser) } })
+    if (!target) return reply.status(404).send({ message: 'Karyawan tidak ditemukan.' })
+
     const user = await req.server.prisma.user.update({ where: { id }, data: { ptkpStatus, npwp } })
     return reply.send({ data: { id: user.id, ptkpStatus: user.ptkpStatus, npwp: user.npwp } })
   })

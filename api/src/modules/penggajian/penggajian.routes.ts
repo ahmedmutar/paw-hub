@@ -2,6 +2,17 @@ import { FastifyInstance } from 'fastify'
 import { UserRole } from '@prisma/client'
 import { authenticate, requireRole } from '../../middleware/auth'
 
+/**
+ * Filter cabang untuk query Payroll: staf non-admin dikunci ke cabang sendiri,
+ * admin dikunci ke seluruh cabang di tenant-nya (model Payroll tidak punya
+ * kolom tenantId langsung, cuma relasi lewat branch).
+ */
+function payrollBranchFilter(user: any) {
+  return user.role === 'admin'
+    ? { branch: { tenantId: BigInt(user.tenantId) } }
+    : { branchId: BigInt(user.branchId) }
+}
+
 export async function penggajianRoutes(app: FastifyInstance) {
 
   // ─── GET /penggajian ─────────────────────────────────────────────────────────
@@ -97,10 +108,11 @@ export async function penggajianRoutes(app: FastifyInstance) {
 
   // ─── GET /penggajian/:id ──────────────────────────────────────────────────────
   app.get('/penggajian/:id', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
 
     const payroll = await app.prisma.payroll.findFirst({
-      where: { id: BigInt(id), isDeleted: false },
+      where: { id: BigInt(id), isDeleted: false, ...payrollBranchFilter(user) },
       include: {
         employee: { select: { id: true, fullname: true, username: true, role: true } },
         createdBy: { select: { id: true, fullname: true } },
@@ -142,6 +154,13 @@ export async function penggajianRoutes(app: FastifyInstance) {
 
     if (!userEmployeeId || !branchId || !datePayed || !periodMonth || !periodYear || !basicSallary) {
       return reply.status(400).send({ message: 'Field wajib tidak lengkap' })
+    }
+
+    if (user.role === 'admin') {
+      const targetBranch = await app.prisma.branch.findFirst({
+        where: { id: BigInt(branchId), tenantId: BigInt(user.tenantId) },
+      })
+      if (!targetBranch) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
     }
 
     // Cek duplikasi
@@ -209,7 +228,7 @@ export async function penggajianRoutes(app: FastifyInstance) {
     const body = req.body as any
 
     const existing = await app.prisma.payroll.findFirst({
-      where: { id: BigInt(id), isDeleted: false },
+      where: { id: BigInt(id), isDeleted: false, ...payrollBranchFilter(user) },
     })
     if (!existing) return reply.status(404).send({ message: 'Slip gaji tidak ditemukan' })
 
@@ -275,10 +294,11 @@ export async function penggajianRoutes(app: FastifyInstance) {
 
   // ─── DELETE /penggajian/:id ───────────────────────────────────────────────────
   app.delete('/penggajian/:id', { preHandler: [authenticate, requireRole('admin')] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
 
     const existing = await app.prisma.payroll.findFirst({
-      where: { id: BigInt(id), isDeleted: false },
+      where: { id: BigInt(id), isDeleted: false, ...payrollBranchFilter(user) },
     })
     if (!existing) return reply.status(404).send({ message: 'Slip gaji tidak ditemukan' })
 

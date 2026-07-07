@@ -5,6 +5,7 @@ import { buildApp, fullMockPrisma, mockModel } from '../helpers/buildApp'
 vi.mock('../../middleware/auth', () => ({
   authenticate: vi.fn((_req: any, _rep: any, done: any) => done()),
   requireRole:  vi.fn(() => (_req: any, _rep: any, done: any) => done()),
+  tenantFilter: vi.fn((authUser: any) => (authUser.role === 'superadmin' ? {} : { tenantId: authUser.tenantId })),
 }))
 
 global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }) as any
@@ -52,6 +53,48 @@ describe('F-39 Laporan Pajak PPh 21', () => {
     const app = await buildApp(pajakRoutes, prisma)
     const res = await app.inject({ method: 'POST', url: '/api/pajak/pph21/reminder', payload: {} })
     expect([200, 201]).toContain(res.statusCode)
+    await app.close()
+  })
+})
+
+// ─── Isolasi antar-tenant (IDOR) — PATCH /pajak/user/:userId/ptkp ─────────────
+// User punya kolom tenantId langsung (beda dari Payroll/Expense), jadi fix-nya
+// pakai tenantFilter() yang sudah dipakai konsisten di modul lain (Cabang, dst).
+describe('pajak.routes — isolasi antar-tenant (IDOR)', () => {
+  it('admin tidak boleh ubah ptkpStatus/npwp milik user tenant lain', async () => {
+    const { pajakRoutes } = await import('../../modules/pajak/pajak.routes')
+    const updateMock = vi.fn().mockResolvedValue({ id: BigInt(2), ptkpStatus: 'K1', npwp: '999' })
+    const prisma = fullMockPrisma({
+      user: { findFirst: vi.fn().mockResolvedValue(null), update: updateMock },
+    })
+    const app = await buildApp(pajakRoutes, prisma)
+
+    const res = await app.inject({
+      method: 'PATCH', url: '/api/pajak/user/2/ptkp',
+      payload: { ptkpStatus: 'K1', npwp: '999' },
+    })
+
+    expect(res.statusCode).toBe(404)
+    expect(updateMock).not.toHaveBeenCalled()
+    await app.close()
+  })
+
+  it('admin boleh ubah ptkpStatus/npwp milik user tenant sendiri', async () => {
+    const { pajakRoutes } = await import('../../modules/pajak/pajak.routes')
+    const targetUser = { id: BigInt(2), tenantId: BigInt(1) }
+    const updateMock = vi.fn().mockResolvedValue({ id: BigInt(2), ptkpStatus: 'K1', npwp: '12.345.678.9-012.000' })
+    const prisma = fullMockPrisma({
+      user: { findFirst: vi.fn().mockResolvedValue(targetUser), update: updateMock },
+    })
+    const app = await buildApp(pajakRoutes, prisma)
+
+    const res = await app.inject({
+      method: 'PATCH', url: '/api/pajak/user/2/ptkp',
+      payload: { ptkpStatus: 'K1', npwp: '12.345.678.9-012.000' },
+    })
+
+    expect(res.statusCode).toBe(200)
+    expect(updateMock).toHaveBeenCalled()
     await app.close()
   })
 })
