@@ -72,8 +72,9 @@ export async function telemedRoutes(app: FastifyInstance) {
   // Detail sesi
   app.get('/telemed/session/:id', { preHandler: [authenticate] }, async (req: any, reply) => {
     const id = BigInt(req.params.id)
-    const session = await req.server.prisma.telemedSession.findUnique({
-      where: { id },
+    const { branchId, role } = req.authUser
+    const session = await req.server.prisma.telemedSession.findFirst({
+      where: { id, ...(role !== 'superadmin' && { branchId }) },
       include: {
         patient: { select: { petName: true, petCategory: true, petYearAge: true, petMonthAge: true } },
         owner: { select: { ownerName: true, phoneNumber: true, address: true } },
@@ -87,6 +88,10 @@ export async function telemedRoutes(app: FastifyInstance) {
   // Dokter konfirmasi
   app.patch('/telemed/session/:id/confirm', { preHandler: [authenticate, requireRole('dokter', 'admin')] }, async (req: any, reply) => {
     const id = BigInt(req.params.id)
+    const { branchId, role } = req.authUser
+    const existing = await req.server.prisma.telemedSession.findFirst({ where: { id, ...(role !== 'superadmin' && { branchId }) } })
+    if (!existing) return reply.status(404).send({ message: 'Sesi tidak ditemukan' })
+
     const session = await req.server.prisma.telemedSession.update({
       where: { id },
       data: { status: 'confirmed', startedAt: new Date() },
@@ -103,6 +108,10 @@ export async function telemedRoutes(app: FastifyInstance) {
   app.patch('/telemed/session/:id/notes', { preHandler: [authenticate, requireRole('dokter', 'admin')] }, async (req: any, reply) => {
     const id = BigInt(req.params.id)
     const { doctorNotes, ePrescription, status } = req.body as any
+    const { branchId, role } = req.authUser
+    const existing = await req.server.prisma.telemedSession.findFirst({ where: { id, ...(role !== 'superadmin' && { branchId }) } })
+    if (!existing) return reply.status(404).send({ message: 'Sesi tidak ditemukan' })
+
     const session = await req.server.prisma.telemedSession.update({
       where: { id },
       data: {
@@ -125,6 +134,10 @@ export async function telemedRoutes(app: FastifyInstance) {
   app.post('/telemed/billing/:id', { preHandler: [authenticate, requireRole('admin', 'kasir')] }, async (req: any, reply) => {
     const id = BigInt(req.params.id)
     const { fee } = req.body as any
+    const { branchId, role } = req.authUser
+    const existing = await req.server.prisma.telemedSession.findFirst({ where: { id, ...(role !== 'superadmin' && { branchId }) } })
+    if (!existing) return reply.status(404).send({ message: 'Sesi tidak ditemukan' })
+
     const session = await req.server.prisma.telemedSession.update({
       where: { id },
       data: { isPaid: true, fee: fee ? Number(fee) : undefined },
