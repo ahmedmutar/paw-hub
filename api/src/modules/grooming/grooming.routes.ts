@@ -36,6 +36,15 @@ function formatPackage(p: any) {
   }
 }
 
+// GroomingSession/GroomingPackage cuma punya branchId (tidak ada tenantId
+// langsung). Admin dikunci ke seluruh cabang di tenant-nya, non-admin
+// dikunci ke cabang sendiri.
+function groomingBranchFilter(user: any) {
+  return user.role === 'admin'
+    ? { branch: { tenantId: BigInt(user.tenantId) } }
+    : { branchId: BigInt(user.branchId) }
+}
+
 export async function groomingRoutes(app: FastifyInstance) {
 
   // ── GET /grooming/stats ───────────────────────────────────────────────────
@@ -45,7 +54,7 @@ export async function groomingRoutes(app: FastifyInstance) {
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const branchFilter = req.authUser.role !== 'admin' ? { branchId: BigInt(req.authUser.branchId) } : {}
+    const branchFilter = groomingBranchFilter(req.authUser)
 
     const [waiting, inProgress, doneToday, revenue] = await Promise.all([
       app.prisma.groomingSession.count({ where: { ...branchFilter, status: 'waiting', isDeleted: false } }),
@@ -69,7 +78,7 @@ export async function groomingRoutes(app: FastifyInstance) {
 
   // ── GET /grooming/antrian — antrian aktif (waiting + in_progress) ─────────
   app.get('/grooming/antrian', { preHandler: [authenticate, requireRole('admin', 'karyawan', 'resepsionis', 'kasir')] }, async (req: any, reply) => {
-    const branchFilter = req.authUser.role !== 'admin' ? { branchId: BigInt(req.authUser.branchId) } : {}
+    const branchFilter = groomingBranchFilter(req.authUser)
 
     const sessions = await app.prisma.groomingSession.findMany({
       where:   { ...branchFilter, status: { in: ['waiting', 'in_progress'] }, isDeleted: false },
@@ -87,7 +96,7 @@ export async function groomingRoutes(app: FastifyInstance) {
     const limit = Math.min(50, Number(q.limit ?? 20))
     const skip  = (page - 1) * limit
 
-    const branchFilter = req.authUser.role !== 'admin' ? { branchId: BigInt(req.authUser.branchId) } : {}
+    const branchFilter = groomingBranchFilter(req.authUser)
 
     // Filter tanggal
     let dateFilter: any = {}
@@ -137,7 +146,7 @@ export async function groomingRoutes(app: FastifyInstance) {
   app.get('/grooming/sesi/:id', { preHandler: [authenticate, requireRole('admin', 'karyawan', 'resepsionis', 'kasir')] }, async (req: any, reply) => {
     const { id } = req.params as any
     const session = await app.prisma.groomingSession.findFirst({
-      where:   { id: BigInt(id), isDeleted: false },
+      where:   { id: BigInt(id), isDeleted: false, ...groomingBranchFilter(req.authUser) },
       include: SESSION_INCLUDE,
     })
     if (!session) return reply.status(404).send({ message: 'Sesi tidak ditemukan' })
@@ -159,9 +168,9 @@ export async function groomingRoutes(app: FastifyInstance) {
 
     const { patientId, groomerId, packageId, scheduledAt, notes, discount } = body.data
 
-    // Ambil harga dari paket
+    // Ambil harga dari paket (harus milik cabang/tenant sendiri)
     const pkg = await app.prisma.groomingPackage.findFirst({
-      where: { id: BigInt(packageId), isDeleted: false, isActive: true },
+      where: { id: BigInt(packageId), isDeleted: false, isActive: true, ...groomingBranchFilter(req.authUser) },
     })
     if (!pkg) return reply.status(404).send({ message: 'Paket grooming tidak ditemukan atau tidak aktif' })
 
@@ -212,7 +221,7 @@ export async function groomingRoutes(app: FastifyInstance) {
     if (!body.success) return reply.status(400).send({ message: 'Input tidak valid' })
 
     const session = await app.prisma.groomingSession.findFirst({
-      where: { id: BigInt(id), isDeleted: false },
+      where: { id: BigInt(id), isDeleted: false, ...groomingBranchFilter(req.authUser) },
     })
     if (!session) return reply.status(404).send({ message: 'Sesi tidak ditemukan' })
 
@@ -260,7 +269,7 @@ export async function groomingRoutes(app: FastifyInstance) {
     if (!body.success) return reply.status(400).send({ message: 'Input tidak valid' })
 
     const session = await app.prisma.groomingSession.findFirst({
-      where: { id: BigInt(id), isDeleted: false },
+      where: { id: BigInt(id), isDeleted: false, ...groomingBranchFilter(req.authUser) },
     })
     if (!session) return reply.status(404).send({ message: 'Sesi tidak ditemukan' })
     if (session.status === 'done' || session.status === 'cancelled') {
@@ -294,7 +303,7 @@ export async function groomingRoutes(app: FastifyInstance) {
   // ── DELETE /grooming/sesi/:id — soft delete ───────────────────────────────
   app.delete('/grooming/sesi/:id', { preHandler: [authenticate, requireRole('admin')] }, async (req: any, reply) => {
     const { id } = req.params as any
-    const session = await app.prisma.groomingSession.findFirst({ where: { id: BigInt(id), isDeleted: false } })
+    const session = await app.prisma.groomingSession.findFirst({ where: { id: BigInt(id), isDeleted: false, ...groomingBranchFilter(req.authUser) } })
     if (!session) return reply.status(404).send({ message: 'Sesi tidak ditemukan' })
 
     await app.prisma.groomingSession.update({
@@ -306,7 +315,7 @@ export async function groomingRoutes(app: FastifyInstance) {
 
   // ── GET /grooming/groomer — list groomer untuk dropdown ───────────────────
   app.get('/grooming/groomer', { preHandler: [authenticate, requireRole('admin', 'karyawan', 'resepsionis')] }, async (req: any, reply) => {
-    const branchFilter = req.authUser.role !== 'admin' ? { branchId: BigInt(req.authUser.branchId) } : {}
+    const branchFilter = groomingBranchFilter(req.authUser)
 
     const groomers = await app.prisma.user.findMany({
       where:   { ...branchFilter, role: { in: ['karyawan', 'admin'] }, isDeleted: false, status: true },
@@ -324,7 +333,7 @@ export async function groomingRoutes(app: FastifyInstance) {
   // ── GET /grooming/paket ───────────────────────────────────────────────────
   app.get('/grooming/paket', { preHandler: [authenticate, requireRole('admin', 'karyawan', 'resepsionis', 'kasir')] }, async (req: any, reply) => {
     const q = req.query as any
-    const branchFilter = req.authUser.role !== 'admin' ? { branchId: BigInt(req.authUser.branchId) } : {}
+    const branchFilter = groomingBranchFilter(req.authUser)
 
     const where: any = {
       ...branchFilter,
@@ -387,7 +396,7 @@ export async function groomingRoutes(app: FastifyInstance) {
     const body = schema.safeParse(req.body)
     if (!body.success) return reply.status(400).send({ message: 'Input tidak valid' })
 
-    const existing = await app.prisma.groomingPackage.findFirst({ where: { id: BigInt(id), isDeleted: false } })
+    const existing = await app.prisma.groomingPackage.findFirst({ where: { id: BigInt(id), isDeleted: false, ...groomingBranchFilter(req.authUser) } })
     if (!existing) return reply.status(404).send({ message: 'Paket tidak ditemukan' })
 
     const updated = await app.prisma.groomingPackage.update({
@@ -405,7 +414,7 @@ export async function groomingRoutes(app: FastifyInstance) {
   // ── DELETE /grooming/paket/:id ────────────────────────────────────────────
   app.delete('/grooming/paket/:id', { preHandler: [authenticate, requireRole('admin')] }, async (req: any, reply) => {
     const { id } = req.params as any
-    const existing = await app.prisma.groomingPackage.findFirst({ where: { id: BigInt(id), isDeleted: false } })
+    const existing = await app.prisma.groomingPackage.findFirst({ where: { id: BigInt(id), isDeleted: false, ...groomingBranchFilter(req.authUser) } })
     if (!existing) return reply.status(404).send({ message: 'Paket tidak ditemukan' })
 
     // Cek apakah ada sesi aktif
