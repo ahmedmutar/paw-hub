@@ -80,14 +80,23 @@ function drawCertPDF(opts: {
   })
 }
 
+// VaccinationRecord/MajorProcedureRecord/CheckUpResult tidak punya branchId
+// langsung — cuma lewat relasi ke branch. Admin dikunci ke seluruh cabang di
+// tenant-nya, non-admin dikunci ke cabang sendiri.
+function certBranchFilter(user: any) {
+  return user.role === 'admin'
+    ? { branch: { tenantId: BigInt(user.tenantId) } }
+    : { branchId: BigInt(user.branchId) }
+}
+
 export async function sertifikatRoutes(fastify: FastifyInstance) {
   const prisma = fastify.prisma
 
   // GET /sertifikat/vaksin/:vaccinationId
   fastify.get('/sertifikat/vaksin/:vaccinationId', { preHandler: [authenticate] }, async (req: any, reply) => {
     const id = BigInt(req.params.vaccinationId)
-    const rec = await prisma.vaccinationRecord.findUnique({
-      where: { id },
+    const rec = await prisma.vaccinationRecord.findFirst({
+      where: { id, checkUpResult: { registration: certBranchFilter(req.authUser) } },
       include: {
         patient: { include: { owner: true } },
         checkUpResult: { include: { doctor: true, registration: { include: { branch: true } } } },
@@ -128,8 +137,8 @@ export async function sertifikatRoutes(fastify: FastifyInstance) {
   // GET /sertifikat/sehat/:checkUpId
   fastify.get('/sertifikat/sehat/:checkUpId', { preHandler: [authenticate] }, async (req: any, reply) => {
     const id = BigInt(req.params.checkUpId)
-    const rec = await prisma.checkUpResult.findUnique({
-      where: { id },
+    const rec = await prisma.checkUpResult.findFirst({
+      where: { id, registration: certBranchFilter(req.authUser) },
       include: {
         doctor: true,
         registration: { include: { branch: true, patient: { include: { owner: true } } } },
@@ -173,8 +182,8 @@ export async function sertifikatRoutes(fastify: FastifyInstance) {
   // GET /sertifikat/prosedur/:procedureId
   fastify.get('/sertifikat/prosedur/:procedureId', { preHandler: [authenticate] }, async (req: any, reply) => {
     const id = BigInt(req.params.procedureId)
-    const rec = await prisma.majorProcedureRecord.findUnique({
-      where: { id },
+    const rec = await prisma.majorProcedureRecord.findFirst({
+      where: { id, checkUpResult: { registration: certBranchFilter(req.authUser) } },
       include: {
         patient: { include: { owner: true } },
         checkUpResult: { include: { doctor: true, registration: { include: { branch: true } } } },
