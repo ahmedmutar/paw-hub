@@ -187,8 +187,14 @@ export async function exportRoutes(app: FastifyInstance) {
   }, async (req: any, reply) => {
     const { paymentId } = req.params as any
 
+    const invoiceBranchFilter = req.authUser.role === 'superadmin'
+      ? {}
+      : req.authUser.tenantId
+        ? { checkUpResult: { registration: { branch: { tenantId: req.authUser.tenantId } } } }
+        : { checkUpResult: { registration: { branchId: req.authUser.branchId } } }
+
     const payment: any = await app.prisma.listOfPayment.findFirst({
-      where: { id: BigInt(paymentId) },
+      where: { id: BigInt(paymentId), ...invoiceBranchFilter },
       include: {
         paymentMethod: { select: { methodName: true } },
         createdBy:     { select: { fullname: true } },
