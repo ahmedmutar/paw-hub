@@ -1,12 +1,21 @@
 import { FastifyInstance } from 'fastify'
 import { authenticate } from '../../middleware/auth'
 
+// CategoryItem/UnitItem/ListOfItem cuma punya branchId (tidak ada tenantId
+// langsung). Admin dikunci ke seluruh cabang di tenant-nya, non-admin
+// dikunci ke cabang sendiri.
+function gudangBranchFilter(user: any) {
+  return user.role === 'admin'
+    ? { branch: { tenantId: BigInt(user.tenantId) } }
+    : { branchId: BigInt(user.branchId) }
+}
+
 export async function gudangRoutes(app: FastifyInstance) {
   // ─── STATS ──────────────────────────────────────────────────────────────────
 
   app.get('/gudang/stats', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
+    const branchFilter = gudangBranchFilter(user)
 
     const [totalItems, lowStock, outOfStock, totalCategories, totalUnits, recentMovements] =
       await Promise.all([
@@ -29,7 +38,7 @@ export async function gudangRoutes(app: FastifyInstance) {
         app.prisma.stockMovement.count({
           where: {
             isDeleted: false,
-            listOfItem: branchFilter.branchId ? { branchId: BigInt(user.branchId) } : {},
+            listOfItem: branchFilter,
             createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
           },
         }),
@@ -44,7 +53,7 @@ export async function gudangRoutes(app: FastifyInstance) {
 
   app.get('/gudang/kategori', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
+    const branchFilter = gudangBranchFilter(user)
     const q = (req.query as any).q ?? ''
 
     const data = await app.prisma.categoryItem.findMany({
@@ -65,6 +74,11 @@ export async function gudangRoutes(app: FastifyInstance) {
     const { categoryName, branchId } = req.body as any
     const targetBranchId = user.role === 'admin' ? BigInt(branchId ?? user.branchId) : BigInt(user.branchId)
 
+    if (user.role === 'admin' && branchId) {
+      const targetBranch = await app.prisma.branch.findFirst({ where: { id: targetBranchId, tenantId: BigInt(user.tenantId) } })
+      if (!targetBranch) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
+    }
+
     const exists = await app.prisma.categoryItem.findFirst({
       where: { categoryName: { equals: categoryName, mode: 'insensitive' }, branchId: targetBranchId, isDeleted: false },
     })
@@ -77,11 +91,12 @@ export async function gudangRoutes(app: FastifyInstance) {
   })
 
   app.put('/gudang/kategori/:id', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
     const { categoryName } = req.body as any
 
-    const item = await app.prisma.categoryItem.findUnique({ where: { id: BigInt(id) } })
-    if (!item || item.isDeleted) return reply.status(404).send({ message: 'Kategori tidak ditemukan.' })
+    const item = await app.prisma.categoryItem.findFirst({ where: { id: BigInt(id), isDeleted: false, ...gudangBranchFilter(user) } })
+    if (!item) return reply.status(404).send({ message: 'Kategori tidak ditemukan.' })
 
     const exists = await app.prisma.categoryItem.findFirst({
       where: { categoryName: { equals: categoryName, mode: 'insensitive' }, branchId: item.branchId, isDeleted: false, NOT: { id: BigInt(id) } },
@@ -93,12 +108,13 @@ export async function gudangRoutes(app: FastifyInstance) {
   })
 
   app.delete('/gudang/kategori/:id', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
-    const item = await app.prisma.categoryItem.findUnique({
-      where: { id: BigInt(id) },
+    const item = await app.prisma.categoryItem.findFirst({
+      where: { id: BigInt(id), isDeleted: false, ...gudangBranchFilter(user) },
       include: { _count: { select: { listOfItems: { where: { isDeleted: false } } } } },
     })
-    if (!item || item.isDeleted) return reply.status(404).send({ message: 'Kategori tidak ditemukan.' })
+    if (!item) return reply.status(404).send({ message: 'Kategori tidak ditemukan.' })
     if (item._count.listOfItems > 0) return reply.status(400).send({ message: `Tidak dapat dihapus. Masih digunakan oleh ${item._count.listOfItems} barang.` })
 
     await app.prisma.categoryItem.update({ where: { id: BigInt(id) }, data: { isDeleted: true } })
@@ -109,7 +125,7 @@ export async function gudangRoutes(app: FastifyInstance) {
 
   app.get('/gudang/satuan', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
+    const branchFilter = gudangBranchFilter(user)
     const q = (req.query as any).q ?? ''
 
     const data = await app.prisma.unitItem.findMany({
@@ -130,6 +146,11 @@ export async function gudangRoutes(app: FastifyInstance) {
     const { unitName, branchId } = req.body as any
     const targetBranchId = user.role === 'admin' ? BigInt(branchId ?? user.branchId) : BigInt(user.branchId)
 
+    if (user.role === 'admin' && branchId) {
+      const targetBranch = await app.prisma.branch.findFirst({ where: { id: targetBranchId, tenantId: BigInt(user.tenantId) } })
+      if (!targetBranch) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
+    }
+
     const exists = await app.prisma.unitItem.findFirst({
       where: { unitName: { equals: unitName, mode: 'insensitive' }, branchId: targetBranchId, isDeleted: false },
     })
@@ -140,11 +161,12 @@ export async function gudangRoutes(app: FastifyInstance) {
   })
 
   app.put('/gudang/satuan/:id', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
     const { unitName } = req.body as any
 
-    const item = await app.prisma.unitItem.findUnique({ where: { id: BigInt(id) } })
-    if (!item || item.isDeleted) return reply.status(404).send({ message: 'Satuan tidak ditemukan.' })
+    const item = await app.prisma.unitItem.findFirst({ where: { id: BigInt(id), isDeleted: false, ...gudangBranchFilter(user) } })
+    if (!item) return reply.status(404).send({ message: 'Satuan tidak ditemukan.' })
 
     const exists = await app.prisma.unitItem.findFirst({
       where: { unitName: { equals: unitName, mode: 'insensitive' }, branchId: item.branchId, isDeleted: false, NOT: { id: BigInt(id) } },
@@ -156,12 +178,13 @@ export async function gudangRoutes(app: FastifyInstance) {
   })
 
   app.delete('/gudang/satuan/:id', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
-    const item = await app.prisma.unitItem.findUnique({
-      where: { id: BigInt(id) },
+    const item = await app.prisma.unitItem.findFirst({
+      where: { id: BigInt(id), isDeleted: false, ...gudangBranchFilter(user) },
       include: { _count: { select: { listOfItems: { where: { isDeleted: false } } } } },
     })
-    if (!item || item.isDeleted) return reply.status(404).send({ message: 'Satuan tidak ditemukan.' })
+    if (!item) return reply.status(404).send({ message: 'Satuan tidak ditemukan.' })
     if (item._count.listOfItems > 0) return reply.status(400).send({ message: `Tidak dapat dihapus. Masih digunakan oleh ${item._count.listOfItems} barang.` })
 
     await app.prisma.unitItem.update({ where: { id: BigInt(id) }, data: { isDeleted: true } })
@@ -172,7 +195,7 @@ export async function gudangRoutes(app: FastifyInstance) {
 
   app.get('/gudang/barang', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
+    const branchFilter = gudangBranchFilter(user)
     const { q = '', categoryId, status, page = '1', limit = '20' } = req.query as any
     const skip = (parseInt(page) - 1) * parseInt(limit)
 
@@ -216,9 +239,10 @@ export async function gudangRoutes(app: FastifyInstance) {
   })
 
   app.get('/gudang/barang/:id', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
-    const data = await app.prisma.listOfItem.findUnique({
-      where: { id: BigInt(id) },
+    const data = await app.prisma.listOfItem.findFirst({
+      where: { id: BigInt(id), isDeleted: false, ...gudangBranchFilter(user) },
       include: {
         categoryItem: true,
         unitItem: true,
@@ -245,6 +269,11 @@ export async function gudangRoutes(app: FastifyInstance) {
       sellingPrice, capitalPrice, doctorFee = 0,
     } = req.body as any
     const targetBranchId = user.role === 'admin' ? BigInt(branchId ?? user.branchId) : BigInt(user.branchId)
+
+    if (user.role === 'admin' && branchId) {
+      const targetBranch = await app.prisma.branch.findFirst({ where: { id: targetBranchId, tenantId: BigInt(user.tenantId) } })
+      if (!targetBranch) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
+    }
 
     const data = await app.prisma.$transaction(async (tx) => {
       const item = await tx.listOfItem.create({
@@ -286,14 +315,15 @@ export async function gudangRoutes(app: FastifyInstance) {
   })
 
   app.put('/gudang/barang/:id', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
     const {
       itemName, description, limitItem, expiredDate,
       unitItemId, categoryItemId, isActive,
     } = req.body as any
 
-    const item = await app.prisma.listOfItem.findUnique({ where: { id: BigInt(id) } })
-    if (!item || item.isDeleted) return reply.status(404).send({ message: 'Barang tidak ditemukan.' })
+    const item = await app.prisma.listOfItem.findFirst({ where: { id: BigInt(id), isDeleted: false, ...gudangBranchFilter(user) } })
+    if (!item) return reply.status(404).send({ message: 'Barang tidak ditemukan.' })
 
     const data = await app.prisma.listOfItem.update({
       where: { id: BigInt(id) },
@@ -316,12 +346,13 @@ export async function gudangRoutes(app: FastifyInstance) {
   })
 
   app.delete('/gudang/barang/:id', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
-    const item = await app.prisma.listOfItem.findUnique({
-      where: { id: BigInt(id) },
+    const item = await app.prisma.listOfItem.findFirst({
+      where: { id: BigInt(id), isDeleted: false, ...gudangBranchFilter(user) },
       include: { _count: { select: { priceItems: { where: { detailItemPatients: { some: {} } } } } } },
     })
-    if (!item || item.isDeleted) return reply.status(404).send({ message: 'Barang tidak ditemukan.' })
+    if (!item) return reply.status(404).send({ message: 'Barang tidak ditemukan.' })
 
     await app.prisma.listOfItem.update({
       where: { id: BigInt(id) },
@@ -333,11 +364,12 @@ export async function gudangRoutes(app: FastifyInstance) {
   // ─── HARGA BARANG ────────────────────────────────────────────────────────────
 
   app.post('/gudang/barang/:id/harga', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
     const { sellingPrice, capitalPrice, doctorFee = 0 } = req.body as any
 
-    const item = await app.prisma.listOfItem.findUnique({ where: { id: BigInt(id) } })
-    if (!item || item.isDeleted) return reply.status(404).send({ message: 'Barang tidak ditemukan.' })
+    const item = await app.prisma.listOfItem.findFirst({ where: { id: BigInt(id), isDeleted: false, ...gudangBranchFilter(user) } })
+    if (!item) return reply.status(404).send({ message: 'Barang tidak ditemukan.' })
 
     if (parseFloat(doctorFee) > parseFloat(sellingPrice)) {
       return reply.status(400).send({ message: 'Doctor fee tidak boleh melebihi harga jual.' })
@@ -365,7 +397,12 @@ export async function gudangRoutes(app: FastifyInstance) {
   })
 
   app.get('/gudang/barang/:id/harga/riwayat', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
     const { id } = req.params as any
+
+    const item = await app.prisma.listOfItem.findFirst({ where: { id: BigInt(id), isDeleted: false, ...gudangBranchFilter(user) } })
+    if (!item) return reply.status(404).send({ message: 'Barang tidak ditemukan.' })
+
     const data = await app.prisma.priceItem.findMany({
       where: { listOfItemId: BigInt(id) },
       orderBy: { createdAt: 'desc' },
@@ -380,7 +417,7 @@ export async function gudangRoutes(app: FastifyInstance) {
     const { itemId, status, dateFrom, dateTo, page = '1', limit = '30' } = req.query as any
     const skip = (parseInt(page) - 1) * parseInt(limit)
 
-    const branchWhere = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
+    const branchWhere = gudangBranchFilter(user)
 
     const where: any = {
       isDeleted: false,
@@ -428,8 +465,8 @@ export async function gudangRoutes(app: FastifyInstance) {
       return reply.status(400).send({ message: 'Jumlah harus lebih dari 0.' })
     }
 
-    const item = await app.prisma.listOfItem.findUnique({ where: { id: BigInt(listOfItemId) } })
-    if (!item || item.isDeleted) return reply.status(404).send({ message: 'Barang tidak ditemukan.' })
+    const item = await app.prisma.listOfItem.findFirst({ where: { id: BigInt(listOfItemId), isDeleted: false, ...gudangBranchFilter(user) } })
+    if (!item) return reply.status(404).send({ message: 'Barang tidak ditemukan.' })
 
     // Cek stok cukup untuk keluar
     if (status === 'keluar' && Number(item.totalItem) < parseFloat(quantity)) {
@@ -470,7 +507,7 @@ export async function gudangRoutes(app: FastifyInstance) {
 
   app.get('/gudang/search', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
+    const branchFilter = gudangBranchFilter(user)
     const q = (req.query as any).q ?? ''
 
     const data = await app.prisma.listOfItem.findMany({
@@ -496,7 +533,7 @@ export async function gudangRoutes(app: FastifyInstance) {
 
   app.get('/gudang/low-stock', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
+    const branchFilter = gudangBranchFilter(user)
 
     const data = await app.prisma.listOfItem.findMany({
       where: {
