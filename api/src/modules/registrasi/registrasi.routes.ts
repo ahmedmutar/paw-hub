@@ -13,6 +13,14 @@ const createSchema = z.object({
   isPriority:   z.boolean().default(false),
 })
 
+// InPatient cuma punya branchId (tidak ada tenantId langsung). Admin
+// dikunci ke seluruh cabang di tenant-nya, non-admin dikunci ke cabang sendiri.
+function riBranchFilter(user: any) {
+  return user.role === 'admin'
+    ? { branch: { tenantId: BigInt(user.tenantId) } }
+    : { branchId: BigInt(user.branchId) }
+}
+
 export async function registrasiRoutes(app: FastifyInstance) {
 
   // ── GET stats hari ini ─────────────────────────────────────────────────────
@@ -161,7 +169,7 @@ export async function registrasiRoutes(app: FastifyInstance) {
   app.get('/registrasi/:id', { preHandler: authenticate }, async (req, reply) => {
     const { id } = req.params as { id: string }
     const reg = await app.prisma.registration.findFirst({
-      where: { id: BigInt(id), isDeleted: false },
+      where: { id: BigInt(id), isDeleted: false, branchId: req.authUser.branchId },
       include: {
         patient: {
           include: {
@@ -284,7 +292,7 @@ export async function registrasiRoutes(app: FastifyInstance) {
     const body = createSchema.partial().safeParse(req.body)
     if (!body.success) return reply.status(400).send({ message: 'Input tidak valid.' })
 
-    const existing = await app.prisma.registration.findUnique({ where: { id: BigInt(id) } })
+    const existing = await app.prisma.registration.findFirst({ where: { id: BigInt(id), branchId: req.authUser.branchId } })
     if (!existing) return reply.status(404).send({ message: 'Registrasi tidak ditemukan.' })
     if (existing.acceptanceStatus !== 'pending') {
       return reply.status(400).send({ message: 'Hanya registrasi yang masih pending yang bisa diubah.' })
@@ -311,6 +319,9 @@ export async function registrasiRoutes(app: FastifyInstance) {
     preHandler: [authenticate, requireRole('admin', 'dokter')],
   }, async (req, reply) => {
     const { id } = req.params as { id: string }
+    const existing = await app.prisma.registration.findFirst({ where: { id: BigInt(id), branchId: req.authUser.branchId } })
+    if (!existing) return reply.status(404).send({ message: 'Registrasi tidak ditemukan.' })
+
     const reg = await app.prisma.registration.update({
       where: { id: BigInt(id) },
       data:  { acceptanceStatus: 'accepted' },
@@ -352,6 +363,9 @@ export async function registrasiRoutes(app: FastifyInstance) {
   }, async (req, reply) => {
     const { id }   = req.params as { id: string }
     const { reason } = (req.body as any) ?? {}
+    const existing = await app.prisma.registration.findFirst({ where: { id: BigInt(id), branchId: req.authUser.branchId } })
+    if (!existing) return reply.status(404).send({ message: 'Registrasi tidak ditemukan.' })
+
     await app.prisma.registration.update({
       where: { id: BigInt(id) },
       data:  { acceptanceStatus: 'declined', cancelReason: reason ?? null },
@@ -364,7 +378,7 @@ export async function registrasiRoutes(app: FastifyInstance) {
     const { id }   = req.params as { id: string }
     const { reason } = (req.body as any) ?? {}
 
-    const existing = await app.prisma.registration.findUnique({ where: { id: BigInt(id) } })
+    const existing = await app.prisma.registration.findFirst({ where: { id: BigInt(id), branchId: req.authUser.branchId } })
     if (!existing) return reply.status(404).send({ message: 'Registrasi tidak ditemukan.' })
     if (existing.acceptanceStatus === 'accepted' && !['admin', 'resepsionis'].includes(req.authUser.role)) {
       return reply.status(403).send({ message: 'Hanya admin atau resepsionis yang dapat membatalkan yang sudah diterima.' })
@@ -382,7 +396,7 @@ export async function registrasiRoutes(app: FastifyInstance) {
     preHandler: [authenticate, requireRole('admin')],
   }, async (req, reply) => {
     const { id } = req.params as { id: string }
-    const existing = await app.prisma.registration.findUnique({ where: { id: BigInt(id) } })
+    const existing = await app.prisma.registration.findFirst({ where: { id: BigInt(id), branchId: req.authUser.branchId } })
     if (!existing) return reply.status(404).send({ message: 'Registrasi tidak ditemukan.' })
     const hasCheckUp = await app.prisma.checkUpResult.findFirst({ where: { patientRegistrationId: BigInt(id) } })
     if (existing.acceptanceStatus === 'accepted' && hasCheckUp) {
@@ -424,8 +438,7 @@ export async function registrasiRoutes(app: FastifyInstance) {
   }
 
   app.get('/rawat-inap/stats', { preHandler: authenticate }, async (req, reply) => {
-    const branchId = req.authUser.branchId
-    const bf = req.authUser.role === 'admin' ? {} : { branchId }
+    const bf = riBranchFilter(req.authUser)
 
     const [pending, accepted, thisMonth, total] = await Promise.all([
       app.prisma.inPatient.count({ where: { ...bf, isDeleted: false, acceptanceStatus: 'pending' } }),
@@ -443,11 +456,10 @@ export async function registrasiRoutes(app: FastifyInstance) {
   })
 
   app.get('/rawat-inap/aktif', { preHandler: authenticate }, async (req, reply) => {
-    const branchId = req.authUser.branchId
     const where: any = {
       isDeleted: false,
       acceptanceStatus: { in: ['pending', 'accepted'] },
-      ...(req.authUser.role !== 'admin' ? { branchId } : {}),
+      ...riBranchFilter(req.authUser),
       ...(req.authUser.role === 'dokter' ? { doctorUserId: req.authUser.userId } : {}),
     }
 
@@ -468,7 +480,7 @@ export async function registrasiRoutes(app: FastifyInstance) {
 
     const where: any = {
       isDeleted: false,
-      ...(req.authUser.role !== 'admin' ? { branchId: req.authUser.branchId } : {}),
+      ...riBranchFilter(req.authUser),
       ...(req.authUser.role === 'dokter' ? { doctorUserId: req.authUser.userId } : {}),
       ...(status ? { acceptanceStatus: status } : {}),
       ...(search ? { patient: { petName: { contains: search, mode: 'insensitive' } } } : {}),
@@ -488,7 +500,7 @@ export async function registrasiRoutes(app: FastifyInstance) {
   app.get('/rawat-inap/:id', { preHandler: authenticate }, async (req, reply) => {
     const { id } = req.params as any
     const ri = await app.prisma.inPatient.findFirst({
-      where: { id: BigInt(id), isDeleted: false },
+      where: { id: BigInt(id), isDeleted: false, ...riBranchFilter(req.authUser) },
       include: RI_INCLUDE,
     })
     if (!ri) return reply.status(404).send({ message: 'Data rawat inap tidak ditemukan' })
@@ -534,7 +546,7 @@ export async function registrasiRoutes(app: FastifyInstance) {
     const { id } = req.params as any
     const { complaint, estimateDay, realityDay, registrant } = req.body as any
 
-    const ri = await app.prisma.inPatient.findFirst({ where: { id: BigInt(id), isDeleted: false } })
+    const ri = await app.prisma.inPatient.findFirst({ where: { id: BigInt(id), isDeleted: false, ...riBranchFilter(req.authUser) } })
     if (!ri) return reply.status(404).send({ message: 'Data rawat inap tidak ditemukan' })
 
     const updated = await app.prisma.inPatient.update({
@@ -560,7 +572,7 @@ export async function registrasiRoutes(app: FastifyInstance) {
       return reply.status(400).send({ message: `Status harus salah satu dari: ${allowed.join(', ')}` })
     }
 
-    const ri = await app.prisma.inPatient.findFirst({ where: { id: BigInt(id), isDeleted: false } })
+    const ri = await app.prisma.inPatient.findFirst({ where: { id: BigInt(id), isDeleted: false, ...riBranchFilter(req.authUser) } })
     if (!ri) return reply.status(404).send({ message: 'Data rawat inap tidak ditemukan' })
 
     const updated = await app.prisma.inPatient.update({
@@ -582,7 +594,7 @@ export async function registrasiRoutes(app: FastifyInstance) {
 
   app.delete('/rawat-inap/:id', { preHandler: [authenticate, requireRole('admin')] }, async (req, reply) => {
     const { id } = req.params as any
-    const ri = await app.prisma.inPatient.findFirst({ where: { id: BigInt(id), isDeleted: false } })
+    const ri = await app.prisma.inPatient.findFirst({ where: { id: BigInt(id), isDeleted: false, ...riBranchFilter(req.authUser) } })
     if (!ri) return reply.status(404).send({ message: 'Data rawat inap tidak ditemukan' })
 
     await app.prisma.inPatient.update({
