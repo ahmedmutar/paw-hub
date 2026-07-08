@@ -140,6 +140,9 @@ Setiap modul di bawah ini diperbaiki dengan proses TDD yang sama seperti babak 1
   - Mobile: screen scan barcode yang sudah ada dari sebelumnya sudah pakai `GET /scan` yang sejak awal sudah aman — tidak ada perubahan kode mobile yang diperlukan.
 - [x] Dashboard — `GET /dashboard/stats` (satu-satunya endpoint di modul ini, dipakai layar Beranda) pakai where kosong `{}` untuk admin — bocor omzet hari ini/bulan ini, antrian aktif, stok menipis, dan transaksi terakhir ke semua tenant. 1 test baru di `api/src/__tests__/routes/dashboard.test.ts` (RED), diperbaiki dengan helper `dashboardBranchFilter()` (admin -> `branch.tenantId`, non-admin -> `branchId`). Full suite: 45 file, 283/283 lolos.
   - Mobile: screen Dashboard (Beranda) yang sudah ada dari sebelumnya otomatis ikut aman — tidak ada perubahan kode mobile yang diperlukan.
+- [x] Notif (WA log & config, beda dari modul `notifikasi` staf yang sudah ada sebelumnya) — `GET /notif/log` dan `/notif/log/stats` untuk admin pakai where kosong `{}`, dan `POST /notif/wa/resend/:id` sama sekali tidak filter `branchId` — admin tenant manapun bisa lihat/kirim ulang log WhatsApp (nomor telepon, isi pesan) tenant lain. Model `WhatsappLog` cuma punya `branchId`, tidak ada `tenantId`. 3 test baru di `api/src/__tests__/routes/notif.test.ts` (file test baru — sebelumnya cuma ada file debug scratch untuk modul ini), diperbaiki dengan helper `notifBranchFilter()` (admin -> `branch.tenantId`, non-admin -> `branchId`) diterapkan ke ketiga endpoint. Full suite: 46 file, 286/286 lolos. Tidak ada mobile — ini murni konfigurasi/log admin backend.
+
+**Semua 21 modul dari full audit babak 2 sudah selesai diperbaiki** (6 CRITICAL + 8 HIGH + 7 MEDIUM). Total dari kedua babak: 29 modul backend diaudit sejak awal sesi TDD-security-pass ini, 29 bug IDOR nyata ditemukan dan diperbaiki, semuanya lewat proses TDD (red → green → full suite hijau) sebelum commit.
 
 ## Mode Ganda: Staf & Pemilik Hewan (Customer Portal)
 

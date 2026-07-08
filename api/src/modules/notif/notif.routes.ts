@@ -4,6 +4,14 @@ import { authenticate, requireRole } from '../../middleware/auth'
 import { sendWhatsapp } from './wa.service'
 import { WaNotifType } from '@prisma/client'
 
+// WhatsappLog cuma punya branchId (tidak ada tenantId langsung). Admin
+// dikunci ke seluruh cabang di tenant-nya, non-admin dikunci ke cabang sendiri.
+function notifBranchFilter(user: any) {
+  return user.role === 'admin'
+    ? { branch: { tenantId: BigInt(user.tenantId) } }
+    : { branchId: BigInt(user.branchId) }
+}
+
 export async function notifRoutes(app: FastifyInstance) {
 
   // ── GET /notif/log — list WhatsApp logs (admin only) ─────────────────────
@@ -16,7 +24,7 @@ export async function notifRoutes(app: FastifyInstance) {
     const search = q.search as string | undefined
 
     const where: any = {
-      ...(req.authUser.role !== 'admin' ? { branchId: req.authUser.branchId } : {}),
+      ...notifBranchFilter(req.authUser),
       ...(status ? { status } : {}),
       ...(type   ? { type }   : {}),
       ...(search ? {
@@ -49,7 +57,7 @@ export async function notifRoutes(app: FastifyInstance) {
 
   // ── GET /notif/log/stats ──────────────────────────────────────────────────
   app.get('/notif/log/stats', { preHandler: [authenticate, requireRole('admin')] }, async (req, reply) => {
-    const bf = req.authUser.role !== 'admin' ? { branchId: req.authUser.branchId } : {}
+    const bf = notifBranchFilter(req.authUser)
     const today = new Date(); today.setHours(0, 0, 0, 0)
 
     const [total, sent, failed, today_count] = await Promise.all([
@@ -99,7 +107,7 @@ export async function notifRoutes(app: FastifyInstance) {
   app.post('/notif/wa/resend/:id', { preHandler: [authenticate, requireRole('admin')] }, async (req, reply) => {
     const { id } = req.params as any
     const log = await app.prisma.whatsappLog.findFirst({
-      where: { id: BigInt(id) },
+      where: { id: BigInt(id), ...notifBranchFilter(req.authUser) },
     })
     if (!log) return reply.status(404).send({ message: 'Log tidak ditemukan' })
     if (log.status === 'sent') return reply.status(400).send({ message: 'Pesan sudah berhasil dikirim' })
