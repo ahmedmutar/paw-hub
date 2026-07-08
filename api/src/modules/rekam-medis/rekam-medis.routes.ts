@@ -40,6 +40,21 @@ const procedureSchema = z.object({
   checkUpResultId: z.string().optional(),
 })
 
+// Patient punya branchId langsung (bukan tenantId), jadi filter kepemilikan
+// custom mirip modul lain: admin dikunci ke seluruh cabang di tenant-nya,
+// non-admin dikunci ke cabang sendiri.
+function patientBranchFilter(user: any) {
+  return user.role === 'admin'
+    ? { branch: { tenantId: BigInt(user.tenantId) } }
+    : { branchId: BigInt(user.branchId) }
+}
+
+// VaccinationRecord/DewormingRecord/MajorProcedureRecord tidak punya branchId
+// sama sekali — kepemilikannya cuma bisa dicek lewat relasi ke patient.
+function childRecordFilter(user: any) {
+  return { patient: patientBranchFilter(user) }
+}
+
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 export async function rekamMedisRoutes(app: FastifyInstance) {
@@ -48,6 +63,7 @@ export async function rekamMedisRoutes(app: FastifyInstance) {
 
   // ── GET rekam medis lengkap per pasien ──────────────────────────────────────
   app.get('/rekam-medis/:patientId', { preHandler: guard }, async (req, reply) => {
+    const user = req.authUser
     const { patientId } = req.params as { patientId: string }
     const pid = BigInt(patientId)
 
@@ -55,7 +71,7 @@ export async function rekamMedisRoutes(app: FastifyInstance) {
     const [patient, medicalRecord, weightHistory, vaccinations, dewormings, procedures, visitHistory] =
       await Promise.all([
         app.prisma.patient.findFirst({
-          where: { id: pid, isDeleted: false },
+          where: { id: pid, isDeleted: false, ...patientBranchFilter(user) },
           include: { owner: true, branch: { select: { branchName: true } } },
         }),
 
@@ -127,6 +143,7 @@ export async function rekamMedisRoutes(app: FastifyInstance) {
 
   // ── UPDATE kartu rekam medis (alergi, kondisi kronis, dll) ─────────────────
   app.put('/rekam-medis/:patientId/kartu', { preHandler: guard }, async (req, reply) => {
+    const user = req.authUser
     const { patientId } = req.params as { patientId: string }
     const body = updateKartuSchema.safeParse(req.body)
     if (!body.success) {
@@ -134,6 +151,8 @@ export async function rekamMedisRoutes(app: FastifyInstance) {
     }
 
     const pid = BigInt(patientId)
+    const patient = await app.prisma.patient.findFirst({ where: { id: pid, isDeleted: false, ...patientBranchFilter(user) } })
+    if (!patient) return reply.status(404).send({ message: 'Pasien tidak ditemukan.' })
 
     // Upsert — buat jika belum ada, update jika sudah ada
     const record = await app.prisma.medicalRecord.upsert({
@@ -147,6 +166,7 @@ export async function rekamMedisRoutes(app: FastifyInstance) {
 
   // ── ADD catatan berat badan ─────────────────────────────────────────────────
   app.post('/rekam-medis/:patientId/berat', { preHandler: guard }, async (req, reply) => {
+    const user = req.authUser
     const { patientId } = req.params as { patientId: string }
     const body = weightSchema.safeParse(req.body)
     if (!body.success) {
@@ -154,6 +174,9 @@ export async function rekamMedisRoutes(app: FastifyInstance) {
     }
 
     const pid = BigInt(patientId)
+    const patient = await app.prisma.patient.findFirst({ where: { id: pid, isDeleted: false, ...patientBranchFilter(user) } })
+    if (!patient) return reply.status(404).send({ message: 'Pasien tidak ditemukan.' })
+
     const { checkUpResultId } = req.query as { checkUpResultId?: string }
 
     // Jika terhubung ke kunjungan, cek sudah ada atau belum
@@ -186,11 +209,15 @@ export async function rekamMedisRoutes(app: FastifyInstance) {
 
   // ── ADD vaksinasi ───────────────────────────────────────────────────────────
   app.post('/rekam-medis/:patientId/vaksinasi', { preHandler: guard }, async (req, reply) => {
+    const user = req.authUser
     const { patientId } = req.params as { patientId: string }
     const body = vaccinationSchema.safeParse(req.body)
     if (!body.success) {
       return reply.status(400).send({ message: 'Input tidak valid.', errors: body.error.flatten().fieldErrors })
     }
+
+    const patient = await app.prisma.patient.findFirst({ where: { id: BigInt(patientId), isDeleted: false, ...patientBranchFilter(user) } })
+    if (!patient) return reply.status(404).send({ message: 'Pasien tidak ditemukan.' })
 
     const record = await app.prisma.vaccinationRecord.create({
       data: {
@@ -210,9 +237,13 @@ export async function rekamMedisRoutes(app: FastifyInstance) {
 
   // ── UPDATE vaksinasi ────────────────────────────────────────────────────────
   app.put('/rekam-medis/vaksinasi/:id', { preHandler: guard }, async (req, reply) => {
+    const user = req.authUser
     const { id } = req.params as { id: string }
     const body = vaccinationSchema.partial().safeParse(req.body)
     if (!body.success) return reply.status(400).send({ message: 'Input tidak valid.' })
+
+    const existing = await app.prisma.vaccinationRecord.findFirst({ where: { id: BigInt(id), ...childRecordFilter(user) } })
+    if (!existing) return reply.status(404).send({ message: 'Data vaksinasi tidak ditemukan.' })
 
     const { checkUpResultId: _v, ...vData } = body.data
     const record = await app.prisma.vaccinationRecord.update({
@@ -229,18 +260,26 @@ export async function rekamMedisRoutes(app: FastifyInstance) {
 
   // ── DELETE vaksinasi ────────────────────────────────────────────────────────
   app.delete('/rekam-medis/vaksinasi/:id', { preHandler: guard }, async (req, reply) => {
+    const user = req.authUser
     const { id } = req.params as { id: string }
+    const existing = await app.prisma.vaccinationRecord.findFirst({ where: { id: BigInt(id), ...childRecordFilter(user) } })
+    if (!existing) return reply.status(404).send({ message: 'Data vaksinasi tidak ditemukan.' })
+
     await app.prisma.vaccinationRecord.delete({ where: { id: BigInt(id) } })
     return reply.send({ message: 'Data vaksinasi berhasil dihapus.' })
   })
 
   // ── ADD obat cacing ─────────────────────────────────────────────────────────
   app.post('/rekam-medis/:patientId/obat-cacing', { preHandler: guard }, async (req, reply) => {
+    const user = req.authUser
     const { patientId } = req.params as { patientId: string }
     const body = dewormingSchema.safeParse(req.body)
     if (!body.success) {
       return reply.status(400).send({ message: 'Input tidak valid.', errors: body.error.flatten().fieldErrors })
     }
+
+    const patient = await app.prisma.patient.findFirst({ where: { id: BigInt(patientId), isDeleted: false, ...patientBranchFilter(user) } })
+    if (!patient) return reply.status(404).send({ message: 'Pasien tidak ditemukan.' })
 
     const record = await app.prisma.dewormingRecord.create({
       data: {
@@ -259,9 +298,13 @@ export async function rekamMedisRoutes(app: FastifyInstance) {
 
   // ── UPDATE obat cacing ──────────────────────────────────────────────────────
   app.put('/rekam-medis/obat-cacing/:id', { preHandler: guard }, async (req, reply) => {
+    const user = req.authUser
     const { id } = req.params as { id: string }
     const body = dewormingSchema.partial().safeParse(req.body)
     if (!body.success) return reply.status(400).send({ message: 'Input tidak valid.' })
+
+    const existing = await app.prisma.dewormingRecord.findFirst({ where: { id: BigInt(id), ...childRecordFilter(user) } })
+    if (!existing) return reply.status(404).send({ message: 'Data obat cacing tidak ditemukan.' })
 
     const { checkUpResultId: _d, ...dData } = body.data
     const record = await app.prisma.dewormingRecord.update({
@@ -278,18 +321,26 @@ export async function rekamMedisRoutes(app: FastifyInstance) {
 
   // ── DELETE obat cacing ──────────────────────────────────────────────────────
   app.delete('/rekam-medis/obat-cacing/:id', { preHandler: guard }, async (req, reply) => {
+    const user = req.authUser
     const { id } = req.params as { id: string }
+    const existing = await app.prisma.dewormingRecord.findFirst({ where: { id: BigInt(id), ...childRecordFilter(user) } })
+    if (!existing) return reply.status(404).send({ message: 'Data obat cacing tidak ditemukan.' })
+
     await app.prisma.dewormingRecord.delete({ where: { id: BigInt(id) } })
     return reply.send({ message: 'Data obat cacing berhasil dihapus.' })
   })
 
   // ── ADD tindakan besar ──────────────────────────────────────────────────────
   app.post('/rekam-medis/:patientId/tindakan', { preHandler: guard }, async (req, reply) => {
+    const user = req.authUser
     const { patientId } = req.params as { patientId: string }
     const body = procedureSchema.safeParse(req.body)
     if (!body.success) {
       return reply.status(400).send({ message: 'Input tidak valid.', errors: body.error.flatten().fieldErrors })
     }
+
+    const patient = await app.prisma.patient.findFirst({ where: { id: BigInt(patientId), isDeleted: false, ...patientBranchFilter(user) } })
+    if (!patient) return reply.status(404).send({ message: 'Pasien tidak ditemukan.' })
 
     const record = await app.prisma.majorProcedureRecord.create({
       data: {
@@ -307,9 +358,13 @@ export async function rekamMedisRoutes(app: FastifyInstance) {
 
   // ── UPDATE tindakan ─────────────────────────────────────────────────────────
   app.put('/rekam-medis/tindakan/:id', { preHandler: guard }, async (req, reply) => {
+    const user = req.authUser
     const { id } = req.params as { id: string }
     const body = procedureSchema.partial().safeParse(req.body)
     if (!body.success) return reply.status(400).send({ message: 'Input tidak valid.' })
+
+    const existing = await app.prisma.majorProcedureRecord.findFirst({ where: { id: BigInt(id), ...childRecordFilter(user) } })
+    if (!existing) return reply.status(404).send({ message: 'Data tindakan tidak ditemukan.' })
 
     const { checkUpResultId: _p, ...pData } = body.data
     const record = await app.prisma.majorProcedureRecord.update({
@@ -325,7 +380,11 @@ export async function rekamMedisRoutes(app: FastifyInstance) {
 
   // ── DELETE tindakan ─────────────────────────────────────────────────────────
   app.delete('/rekam-medis/tindakan/:id', { preHandler: guard }, async (req, reply) => {
+    const user = req.authUser
     const { id } = req.params as { id: string }
+    const existing = await app.prisma.majorProcedureRecord.findFirst({ where: { id: BigInt(id), ...childRecordFilter(user) } })
+    if (!existing) return reply.status(404).send({ message: 'Data tindakan tidak ditemukan.' })
+
     await app.prisma.majorProcedureRecord.delete({ where: { id: BigInt(id) } })
     return reply.send({ message: 'Data tindakan berhasil dihapus.' })
   })
