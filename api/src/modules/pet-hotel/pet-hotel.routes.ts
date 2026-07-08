@@ -2,6 +2,12 @@
 import { FastifyInstance } from 'fastify'
 import { authenticate, requireRole } from '../../middleware/auth'
 
+// HotelRoom/HotelBooking punya branchId (superadmin bypass, sisanya dikunci
+// ke cabang sendiri — mengikuti pola yang sudah dipakai list endpoint modul ini).
+function hotelBranchFilter(user: any) {
+  return user.role === 'superadmin' ? {} : { branchId: BigInt(user.branchId) }
+}
+
 export async function petHotelRoutes(app: FastifyInstance) {
   // ── Kamar ──────────────────────────────────────────────────────────────────
   app.get('/pet-hotel/kamar', { preHandler: [authenticate] }, async (req: any, reply) => {
@@ -25,6 +31,9 @@ export async function petHotelRoutes(app: FastifyInstance) {
   app.put('/pet-hotel/kamar/:id', { preHandler: [authenticate, requireRole('admin')] }, async (req: any, reply) => {
     const id = BigInt(req.params.id)
     const { roomName, roomType, capacity, pricePerNight, description, isActive } = req.body as any
+    const existing = await req.server.prisma.hotelRoom.findFirst({ where: { id, ...hotelBranchFilter(req.authUser) } })
+    if (!existing) return reply.status(404).send({ message: 'Kamar tidak ditemukan' })
+
     const room = await req.server.prisma.hotelRoom.update({
       where: { id },
       data: { roomName, roomType, capacity: capacity ? Number(capacity) : undefined, pricePerNight: pricePerNight ? Number(pricePerNight) : undefined, description, isActive },
@@ -90,7 +99,7 @@ export async function petHotelRoutes(app: FastifyInstance) {
     const co = new Date(checkOut)
     const totalNights = Math.max(1, Math.ceil((co.getTime() - ci.getTime()) / (1000 * 60 * 60 * 24)))
 
-    const room = await req.server.prisma.hotelRoom.findUnique({ where: { id: BigInt(roomId) } })
+    const room = await req.server.prisma.hotelRoom.findFirst({ where: { id: BigInt(roomId), ...hotelBranchFilter(req.authUser) } })
     if (!room) return reply.status(404).send({ message: 'Kamar tidak ditemukan' })
 
     // Check room availability
@@ -122,6 +131,9 @@ export async function petHotelRoutes(app: FastifyInstance) {
   app.patch('/pet-hotel/booking/:id/status', { preHandler: [authenticate] }, async (req: any, reply) => {
     const id = BigInt(req.params.id)
     const { status } = req.body as any
+    const existing = await req.server.prisma.hotelBooking.findFirst({ where: { id, ...hotelBranchFilter(req.authUser) } })
+    if (!existing) return reply.status(404).send({ message: 'Booking tidak ditemukan' })
+
     const booking = await req.server.prisma.hotelBooking.update({ where: { id }, data: { status } })
     return reply.send({ data: booking })
   })
@@ -132,7 +144,7 @@ export async function petHotelRoutes(app: FastifyInstance) {
     const { additionalServices = [] } = req.body as any
     const extra = (additionalServices as { name: string; price: number }[]).reduce((s, x) => s + Number(x.price), 0)
 
-    const booking = await req.server.prisma.hotelBooking.findUnique({ where: { id } })
+    const booking = await req.server.prisma.hotelBooking.findFirst({ where: { id, ...hotelBranchFilter(req.authUser) } })
     if (!booking) return reply.status(404).send({ message: 'Booking tidak ditemukan' })
 
     const updated = await req.server.prisma.hotelBooking.update({
@@ -145,6 +157,9 @@ export async function petHotelRoutes(app: FastifyInstance) {
   // ── Care log ───────────────────────────────────────────────────────────────
   app.get('/pet-hotel/care-log/:bookingId', { preHandler: [authenticate] }, async (req: any, reply) => {
     const bookingId = BigInt(req.params.bookingId)
+    const booking = await req.server.prisma.hotelBooking.findFirst({ where: { id: bookingId, ...hotelBranchFilter(req.authUser) } })
+    if (!booking) return reply.status(404).send({ message: 'Booking tidak ditemukan' })
+
     const logs = await req.server.prisma.hotelCareLog.findMany({
       where: { bookingId },
       include: { staff: { select: { fullname: true } } },
@@ -158,8 +173,8 @@ export async function petHotelRoutes(app: FastifyInstance) {
     const bookingId = BigInt(req.params.bookingId)
     const { logDate, mealNote, drinkNote, activityNote, conditionNote, photoUrl } = req.body as any
 
-    const booking = await req.server.prisma.hotelBooking.findUnique({
-      where: { id: bookingId },
+    const booking = await req.server.prisma.hotelBooking.findFirst({
+      where: { id: bookingId, ...hotelBranchFilter(req.authUser) },
       include: { owner: true, patient: true },
     })
     if (!booking) return reply.status(404).send({ message: 'Booking tidak ditemukan' })
