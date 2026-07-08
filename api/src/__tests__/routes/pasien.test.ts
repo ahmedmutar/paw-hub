@@ -52,3 +52,69 @@ describe('F-04 Data Pasien', () => {
     await app.close()
   })
 })
+
+// ─── Isolasi antar-cabang (IDOR) ────────────────────────────────────────────────
+// Patient/Owner punya branchId langsung. Modul ini tidak punya pola
+// tenant-wide untuk admin (list & stats mengunci SEMUA role ke branchId
+// sendiri), jadi endpoint by-id juga harus dikunci ke branchId sendiri.
+// PUT/DELETE sebelumnya TIDAK punya requireRole sama sekali dan tidak cek
+// kepemilikan cabang sama sekali (blind update).
+const OTHER_BRANCH_PATIENT = { id: BigInt(50), petName: 'Kucing Lain', petCategory: 'Kucing', ownerId: BigInt(2), branchId: BigInt(2), isDeleted: false }
+const OTHER_BRANCH_OWNER = { id: BigInt(51), ownerName: 'Orang Lain', branchId: BigInt(2), isDeleted: false }
+
+function simulateFindFirst(record: Record<string, any>) {
+  return vi.fn((args: any) => {
+    const where = args?.where ?? {}
+    if ('id' in where && String(where.id) !== String(record.id)) return Promise.resolve(null)
+    if ('branchId' in where && String(where.branchId) !== String(record.branchId)) return Promise.resolve(null)
+    if ('isDeleted' in where && where.isDeleted !== record.isDeleted) return Promise.resolve(null)
+    return Promise.resolve(record)
+  })
+}
+
+describe('pasien.routes — isolasi antar-cabang (IDOR)', () => {
+  it('GET /pasien/:id milik cabang lain harus 404', async () => {
+    const { pasienRoutes } = await import('../../modules/pasien/pasien.routes')
+    const prisma = fullMockPrisma({ patient: { findFirst: simulateFindFirst(OTHER_BRANCH_PATIENT) } })
+    const app = await buildApp(pasienRoutes, prisma)
+    const res = await app.inject({ method: 'GET', url: '/api/pasien/50' })
+    expect(res.statusCode).toBe(404)
+    await app.close()
+  })
+
+  it('PUT /pasien/:id milik cabang lain harus 404, bukan berhasil diubah', async () => {
+    const { pasienRoutes } = await import('../../modules/pasien/pasien.routes')
+    const updateMock = vi.fn().mockResolvedValue({ ...OTHER_BRANCH_PATIENT, petName: 'Diubah' })
+    const prisma = fullMockPrisma({ patient: { findFirst: simulateFindFirst(OTHER_BRANCH_PATIENT), update: updateMock } })
+    const app = await buildApp(pasienRoutes, prisma)
+    const res = await app.inject({ method: 'PUT', url: '/api/pasien/50', payload: { petName: 'Diubah' } })
+    expect(res.statusCode).toBe(404)
+    expect(updateMock).not.toHaveBeenCalled()
+    await app.close()
+  })
+
+  it('PUT /pemilik/:id milik cabang lain harus 404, bukan berhasil diubah', async () => {
+    const { pasienRoutes } = await import('../../modules/pasien/pasien.routes')
+    const updateMock = vi.fn().mockResolvedValue({ ...OTHER_BRANCH_OWNER, ownerName: 'Diubah' })
+    const prisma = fullMockPrisma({ owner: { findFirst: simulateFindFirst(OTHER_BRANCH_OWNER), update: updateMock } })
+    const app = await buildApp(pasienRoutes, prisma)
+    const res = await app.inject({ method: 'PUT', url: '/api/pemilik/51', payload: { ownerName: 'Diubah' } })
+    expect(res.statusCode).toBe(404)
+    expect(updateMock).not.toHaveBeenCalled()
+    await app.close()
+  })
+
+  it('DELETE /pasien/:id milik cabang lain harus 404, bukan terhapus', async () => {
+    const { pasienRoutes } = await import('../../modules/pasien/pasien.routes')
+    const updateMock = vi.fn().mockResolvedValue({ ...OTHER_BRANCH_PATIENT, isDeleted: true })
+    const prisma = fullMockPrisma({
+      patient: { findFirst: simulateFindFirst(OTHER_BRANCH_PATIENT), update: updateMock },
+      registration: { findFirst: vi.fn().mockResolvedValue(null) },
+    })
+    const app = await buildApp(pasienRoutes, prisma)
+    const res = await app.inject({ method: 'DELETE', url: '/api/pasien/50' })
+    expect(res.statusCode).toBe(404)
+    expect(updateMock).not.toHaveBeenCalled()
+    await app.close()
+  })
+})

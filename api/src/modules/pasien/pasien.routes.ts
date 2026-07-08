@@ -131,7 +131,7 @@ export async function pasienRoutes(app: FastifyInstance) {
     const { id } = req.params as { id: string }
 
     const patient = await app.prisma.patient.findFirst({
-      where: { id: BigInt(id), isDeleted: false },
+      where: { id: BigInt(id), isDeleted: false, branchId: req.authUser.branchId },
       include: {
         owner: true,
         medicalRecord: true,
@@ -217,6 +217,9 @@ export async function pasienRoutes(app: FastifyInstance) {
       return reply.status(400).send({ message: 'Input tidak valid.', errors: body.error.flatten().fieldErrors })
     }
 
+    const existing = await app.prisma.patient.findFirst({ where: { id: BigInt(id), isDeleted: false, branchId: req.authUser.branchId } })
+    if (!existing) return reply.status(404).send({ message: 'Pasien tidak ditemukan.' })
+
     const patient = await app.prisma.patient.update({
       where: { id: BigInt(id) },
       data: {
@@ -240,6 +243,9 @@ export async function pasienRoutes(app: FastifyInstance) {
       return reply.status(400).send({ message: 'Input tidak valid.', errors: body.error.flatten().fieldErrors })
     }
 
+    const existing = await app.prisma.owner.findFirst({ where: { id: BigInt(id), isDeleted: false, branchId: req.authUser.branchId } })
+    if (!existing) return reply.status(404).send({ message: 'Data pemilik tidak ditemukan.' })
+
     const owner = await app.prisma.owner.update({
       where: { id: BigInt(id) },
       data:  body.data,
@@ -250,6 +256,9 @@ export async function pasienRoutes(app: FastifyInstance) {
   // ── DELETE pasien (soft) ───────────────────────────────────────────────────
   app.delete('/pasien/:id', { preHandler: authenticate }, async (req, reply) => {
     const { id } = req.params as { id: string }
+
+    const existing = await app.prisma.patient.findFirst({ where: { id: BigInt(id), isDeleted: false, branchId: req.authUser.branchId } })
+    if (!existing) return reply.status(404).send({ message: 'Pasien tidak ditemukan.' })
 
     // Cek apakah ada registrasi aktif
     const activeReg = await app.prisma.registration.findFirst({
