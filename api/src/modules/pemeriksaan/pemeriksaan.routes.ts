@@ -23,6 +23,14 @@ async function upsertWeightRecord(
   })
 }
 
+// CheckUpResult tidak punya branchId langsung — cuma bisa dicek lewat relasi
+// patientRegistrationId -> registration.branchId. Modul ini juga tidak punya
+// pola tenant-wide untuk admin (GET list mengunci SEMUA role ke branchId
+// sendiri), jadi filter kepemilikannya konsisten dikunci ke branchId sendiri.
+function checkUpBranchFilter(user: any) {
+  return { registration: { branchId: BigInt(user.branchId) } }
+}
+
 export async function pemeriksaanRoutes(app: FastifyInstance) {
 
   // ── GET master items (autocomplete) ────────────────────────────────────────
@@ -202,7 +210,7 @@ export async function pemeriksaanRoutes(app: FastifyInstance) {
     const { id } = req.params as { id: string }
 
     const result = await app.prisma.checkUpResult.findFirst({
-      where: { id: BigInt(id), isDeleted: false },
+      where: { id: BigInt(id), isDeleted: false, ...checkUpBranchFilter(req.authUser) },
       include: {
         registration: {
           include: {
@@ -301,8 +309,8 @@ export async function pemeriksaanRoutes(app: FastifyInstance) {
     const body = schema.safeParse(req.body)
     if (!body.success) return reply.status(400).send({ message: 'Input tidak valid.', errors: body.error.flatten().fieldErrors })
 
-    const existing = await app.prisma.checkUpResult.findUnique({
-      where: { id: BigInt(id) },
+    const existing = await app.prisma.checkUpResult.findFirst({
+      where: { id: BigInt(id), ...checkUpBranchFilter(req.authUser) },
       include: { registration: { include: { patient: { select: { id: true } } } } },
     })
     if (!existing) return reply.status(404).send({ message: 'Pemeriksaan tidak ditemukan.' })
@@ -346,7 +354,7 @@ export async function pemeriksaanRoutes(app: FastifyInstance) {
     const body = schema.safeParse(req.body)
     if (!body.success) return reply.status(400).send({ message: 'Input tidak valid.', errors: body.error.flatten().fieldErrors })
 
-    const checkUp = await app.prisma.checkUpResult.findUnique({ where: { id: BigInt(id) } })
+    const checkUp = await app.prisma.checkUpResult.findFirst({ where: { id: BigInt(id), ...checkUpBranchFilter(req.authUser) } })
     if (!checkUp) return reply.status(404).send({ message: 'Pemeriksaan tidak ditemukan.' })
     if (checkUp.statusFinish) return reply.status(400).send({ message: 'Pemeriksaan sudah selesai.' })
 
@@ -400,11 +408,11 @@ export async function pemeriksaanRoutes(app: FastifyInstance) {
   }, async (req, reply) => {
     const { id, itemId } = req.params as { id: string; itemId: string }
 
-    const checkUp = await app.prisma.checkUpResult.findUnique({ where: { id: BigInt(id) } })
+    const checkUp = await app.prisma.checkUpResult.findFirst({ where: { id: BigInt(id), ...checkUpBranchFilter(req.authUser) } })
     if (!checkUp) return reply.status(404).send({ message: 'Pemeriksaan tidak ditemukan.' })
     if (checkUp.statusFinish) return reply.status(400).send({ message: 'Pemeriksaan sudah selesai.' })
 
-    const detail = await app.prisma.detailItemPatient.findUnique({ where: { id: BigInt(itemId) } })
+    const detail = await app.prisma.detailItemPatient.findFirst({ where: { id: BigInt(itemId), checkUpResultId: BigInt(id) } })
     if (!detail) return reply.status(404).send({ message: 'Item tidak ditemukan.' })
 
     await app.prisma.$transaction(async (tx) => {
@@ -445,7 +453,7 @@ export async function pemeriksaanRoutes(app: FastifyInstance) {
     const body = schema.safeParse(req.body)
     if (!body.success) return reply.status(400).send({ message: 'Input tidak valid.', errors: body.error.flatten().fieldErrors })
 
-    const checkUp = await app.prisma.checkUpResult.findUnique({ where: { id: BigInt(id) } })
+    const checkUp = await app.prisma.checkUpResult.findFirst({ where: { id: BigInt(id), ...checkUpBranchFilter(req.authUser) } })
     if (!checkUp) return reply.status(404).send({ message: 'Pemeriksaan tidak ditemukan.' })
     if (checkUp.statusFinish) return reply.status(400).send({ message: 'Pemeriksaan sudah selesai.' })
 
@@ -473,9 +481,12 @@ export async function pemeriksaanRoutes(app: FastifyInstance) {
   }, async (req, reply) => {
     const { id, serviceId } = req.params as { id: string; serviceId: string }
 
-    const checkUp = await app.prisma.checkUpResult.findUnique({ where: { id: BigInt(id) } })
+    const checkUp = await app.prisma.checkUpResult.findFirst({ where: { id: BigInt(id), ...checkUpBranchFilter(req.authUser) } })
     if (!checkUp) return reply.status(404).send({ message: 'Pemeriksaan tidak ditemukan.' })
     if (checkUp.statusFinish) return reply.status(400).send({ message: 'Pemeriksaan sudah selesai.' })
+
+    const detail = await app.prisma.detailServicePatient.findFirst({ where: { id: BigInt(serviceId), checkUpResultId: BigInt(id) } })
+    if (!detail) return reply.status(404).send({ message: 'Layanan tidak ditemukan.' })
 
     await app.prisma.detailServicePatient.delete({ where: { id: BigInt(serviceId) } })
     return reply.send({ message: 'Layanan berhasil dihapus.' })
@@ -494,7 +505,7 @@ export async function pemeriksaanRoutes(app: FastifyInstance) {
     const body = schema.safeParse(req.body)
     if (!body.success) return reply.status(400).send({ message: 'Input tidak valid.', errors: body.error.flatten().fieldErrors })
 
-    const checkUp = await app.prisma.checkUpResult.findUnique({ where: { id: BigInt(id) } })
+    const checkUp = await app.prisma.checkUpResult.findFirst({ where: { id: BigInt(id), ...checkUpBranchFilter(req.authUser) } })
     if (!checkUp) return reply.status(404).send({ message: 'Pemeriksaan tidak ditemukan.' })
     if (checkUp.statusFinish) return reply.status(400).send({ message: 'Pemeriksaan sudah selesai.' })
 
@@ -518,9 +529,12 @@ export async function pemeriksaanRoutes(app: FastifyInstance) {
   }, async (req, reply) => {
     const { id, mgId } = req.params as { id: string; mgId: string }
 
-    const checkUp = await app.prisma.checkUpResult.findUnique({ where: { id: BigInt(id) } })
+    const checkUp = await app.prisma.checkUpResult.findFirst({ where: { id: BigInt(id), ...checkUpBranchFilter(req.authUser) } })
     if (!checkUp) return reply.status(404).send({ message: 'Pemeriksaan tidak ditemukan.' })
     if (checkUp.statusFinish) return reply.status(400).send({ message: 'Pemeriksaan sudah selesai.' })
+
+    const detail = await app.prisma.detailMedicineGroupResult.findFirst({ where: { id: BigInt(mgId), checkUpResultId: BigInt(id) } })
+    if (!detail) return reply.status(404).send({ message: 'Kelompok obat tidak ditemukan.' })
 
     await app.prisma.detailMedicineGroupResult.delete({ where: { id: BigInt(mgId) } })
     return reply.send({ message: 'Kelompok obat berhasil dihapus.' })
@@ -532,8 +546,8 @@ export async function pemeriksaanRoutes(app: FastifyInstance) {
   }, async (req, reply) => {
     const { id } = req.params as { id: string }
 
-    const checkUp = await app.prisma.checkUpResult.findUnique({
-      where: { id: BigInt(id) },
+    const checkUp = await app.prisma.checkUpResult.findFirst({
+      where: { id: BigInt(id), ...checkUpBranchFilter(req.authUser) },
       include: {
         registration: {
           include: { patient: true, doctor: { select: { id: true } } },
@@ -556,6 +570,9 @@ export async function pemeriksaanRoutes(app: FastifyInstance) {
     preHandler: [authenticate, requireRole('admin')],
   }, async (req, reply) => {
     const { id } = req.params as { id: string }
+    const existing = await app.prisma.checkUpResult.findFirst({ where: { id: BigInt(id), ...checkUpBranchFilter(req.authUser) } })
+    if (!existing) return reply.status(404).send({ message: 'Data pemeriksaan tidak ditemukan.' })
+
     await app.prisma.checkUpResult.update({
       where: { id: BigInt(id) },
       data:  { isDeleted: true, deletedAt: new Date() },
