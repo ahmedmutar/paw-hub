@@ -11,7 +11,7 @@ export async function barcodeRoutes(fastify: FastifyInstance) {
     preHandler: [authenticate, requireRole('admin')],
   }, async (req: any, reply) => {
     const itemId = BigInt(req.params.itemId)
-    const item = await prisma.listOfItem.findUnique({ where: { id: itemId } })
+    const item = await prisma.listOfItem.findFirst({ where: { id: itemId, branchId: req.authUser.branchId } })
     if (!item) return reply.status(404).send({ message: 'Item tidak ditemukan' })
 
     const barcodeId = item.barcodeId ?? `VET-${String(itemId).padStart(6, '0')}-${randomUUID().slice(0, 4).toUpperCase()}`
@@ -64,8 +64,8 @@ export async function barcodeRoutes(fastify: FastifyInstance) {
     preHandler: [authenticate],
   }, async (req: any, reply) => {
     const itemId = BigInt(req.params.itemId)
-    const item = await prisma.listOfItem.findUnique({
-      where: { id: itemId },
+    const item = await prisma.listOfItem.findFirst({
+      where: { id: itemId, branchId: req.authUser.branchId },
       include: { unitItem: true, priceItems: { orderBy: { createdAt: 'desc' }, take: 1 } },
     })
     if (!item) return reply.status(404).send({ message: 'Item tidak ditemukan' })
