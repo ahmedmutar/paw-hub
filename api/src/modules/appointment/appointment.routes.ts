@@ -26,6 +26,14 @@ function formatAppt(a: any) {
   }
 }
 
+// Appointment cuma punya branchId (tidak ada tenantId langsung). Admin
+// dikunci ke seluruh cabang di tenant-nya, non-admin dikunci ke cabang sendiri.
+function appointmentBranchFilter(user: any) {
+  return user.role === 'admin'
+    ? { branch: { tenantId: BigInt(user.tenantId) } }
+    : { branchId: BigInt(user.branchId) }
+}
+
 export async function appointmentRoutes(app: FastifyInstance) {
 
   // ── GET /booking/config — public endpoint untuk form booking ──────────────
@@ -148,7 +156,7 @@ export async function appointmentRoutes(app: FastifyInstance) {
     const search = q.search as string | undefined
 
     const where: any = {
-      ...(req.authUser.role !== 'admin' ? { branchId: req.authUser.branchId } : {}),
+      ...appointmentBranchFilter(req.authUser),
       ...(req.authUser.role === 'dokter' ? { doctorUserId: req.authUser.userId } : {}),
       ...(status ? { status } : {}),
       ...(date   ? { appointmentDate: new Date(date) } : {}),
@@ -175,7 +183,7 @@ export async function appointmentRoutes(app: FastifyInstance) {
 
   // ── GET /appointment/stats ─────────────────────────────────────────────────
   app.get('/appointment/stats', { preHandler: authenticate }, async (req, reply) => {
-    const bf    = req.authUser.role !== 'admin' ? { branchId: req.authUser.branchId } : {}
+    const bf    = appointmentBranchFilter(req.authUser)
     const today = new Date(); today.setHours(0, 0, 0, 0)
     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1)
 
@@ -192,8 +200,8 @@ export async function appointmentRoutes(app: FastifyInstance) {
   // ── GET /appointment/:id ───────────────────────────────────────────────────
   app.get('/appointment/:id', { preHandler: authenticate }, async (req, reply) => {
     const { id } = req.params as any
-    const appt = await app.prisma.appointment.findUnique({
-      where: { id: BigInt(id) }, include: APPT_INCLUDE,
+    const appt = await app.prisma.appointment.findFirst({
+      where: { id: BigInt(id), ...appointmentBranchFilter(req.authUser) }, include: APPT_INCLUDE,
     })
     if (!appt) return reply.status(404).send({ message: 'Booking tidak ditemukan' })
     return reply.send({ data: formatAppt(appt) })
@@ -204,7 +212,7 @@ export async function appointmentRoutes(app: FastifyInstance) {
     const { id } = req.params as any
     const { appointmentDate, appointmentTime, notes, doctorUserId } = req.body as any
 
-    const appt = await app.prisma.appointment.findUnique({ where: { id: BigInt(id) } })
+    const appt = await app.prisma.appointment.findFirst({ where: { id: BigInt(id), ...appointmentBranchFilter(req.authUser) } })
     if (!appt) return reply.status(404).send({ message: 'Booking tidak ditemukan' })
     if (['converted', 'cancelled'].includes(appt.status)) {
       return reply.status(400).send({ message: 'Booking ini tidak dapat diubah lagi' })
@@ -244,7 +252,7 @@ export async function appointmentRoutes(app: FastifyInstance) {
     preHandler: [authenticate, requireRole('admin', 'dokter', 'resepsionis')],
   }, async (req, reply) => {
     const { id } = req.params as any
-    const appt = await app.prisma.appointment.findUnique({ where: { id: BigInt(id) }, include: APPT_INCLUDE })
+    const appt = await app.prisma.appointment.findFirst({ where: { id: BigInt(id), ...appointmentBranchFilter(req.authUser) }, include: APPT_INCLUDE })
     if (!appt) return reply.status(404).send({ message: 'Booking tidak ditemukan' })
     if (appt.status !== 'pending' && appt.status !== 'rescheduled') {
       return reply.status(400).send({ message: 'Hanya booking pending/rescheduled yang dapat dikonfirmasi' })
@@ -277,7 +285,7 @@ export async function appointmentRoutes(app: FastifyInstance) {
     const { id } = req.params as any
     const { reason } = req.body as any
 
-    const appt = await app.prisma.appointment.findUnique({ where: { id: BigInt(id) }, include: APPT_INCLUDE })
+    const appt = await app.prisma.appointment.findFirst({ where: { id: BigInt(id), ...appointmentBranchFilter(req.authUser) }, include: APPT_INCLUDE })
     if (!appt) return reply.status(404).send({ message: 'Booking tidak ditemukan' })
     if (['converted', 'cancelled', 'declined'].includes(appt.status)) {
       return reply.status(400).send({ message: 'Status booking tidak bisa diubah lagi' })
@@ -307,7 +315,7 @@ export async function appointmentRoutes(app: FastifyInstance) {
     preHandler: [authenticate, requireRole('admin', 'resepsionis')],
   }, async (req, reply) => {
     const { id } = req.params as any
-    const appt = await app.prisma.appointment.findUnique({ where: { id: BigInt(id) }, include: APPT_INCLUDE })
+    const appt = await app.prisma.appointment.findFirst({ where: { id: BigInt(id), ...appointmentBranchFilter(req.authUser) }, include: APPT_INCLUDE })
     if (!appt) return reply.status(404).send({ message: 'Booking tidak ditemukan' })
     if (appt.status === 'converted') {
       return reply.status(400).send({ message: 'Booking ini sudah dikonversi ke antrian' })
@@ -360,7 +368,7 @@ export async function appointmentRoutes(app: FastifyInstance) {
     preHandler: [authenticate, requireRole('admin', 'resepsionis')],
   }, async (req, reply) => {
     const { id } = req.params as any
-    const appt = await app.prisma.appointment.findUnique({ where: { id: BigInt(id) } })
+    const appt = await app.prisma.appointment.findFirst({ where: { id: BigInt(id), ...appointmentBranchFilter(req.authUser) } })
     if (!appt) return reply.status(404).send({ message: 'Booking tidak ditemukan' })
     if (appt.status === 'converted') {
       return reply.status(400).send({ message: 'Booking yang sudah dikonversi tidak dapat dibatalkan' })
