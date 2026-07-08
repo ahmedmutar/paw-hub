@@ -66,3 +66,53 @@ describe('F-34 Manajemen Lab', () => {
     await app.close()
   })
 })
+
+// ─── Isolasi antar-cabang (IDOR) ────────────────────────────────────────────────
+// PATCH /request/:id/result sebelumnya TIDAK punya requireRole sama sekali
+// (staf manapun bisa tulis/timpa hasil lab), dan GET /history/:patientId juga
+// tidak filter branchId sama sekali. List (/lab/request) sudah benar pakai
+// `role !== 'superadmin' && { branchId }`.
+const OTHER_BRANCH_REQUEST = { id: BigInt(50), branchId: BigInt(2), testType: 'hematologi', patient: { petName: 'Kucing Lain', owner: { ownerName: 'Orang Lain', phoneNumber: '08199999999' } } }
+const OWN_REQUEST = { ...mockRequest }
+
+describe('lab.routes — isolasi antar-cabang (IDOR)', () => {
+  it('PATCH /lab/request/:id/result milik cabang lain harus 404, bukan berhasil tulis hasil', async () => {
+    const { labRoutes } = await import('../../modules/lab/lab.routes')
+    const upsertMock = vi.fn().mockResolvedValue({ id: BigInt(1) })
+    const prisma = fullMockPrisma({
+      labRequest: { findFirst: vi.fn().mockResolvedValue(null) },
+      labResult: { upsert: upsertMock },
+    })
+    const app = await buildApp(labRoutes, prisma)
+    const res = await app.inject({ method: 'PATCH', url: '/api/lab/request/50/result', payload: { isReady: true } })
+    expect(res.statusCode).toBe(404)
+    expect(upsertMock).not.toHaveBeenCalled()
+    await app.close()
+  })
+
+  it('PATCH /lab/request/:id/result milik cabang sendiri tetap berhasil (kontrol positif)', async () => {
+    const { labRoutes } = await import('../../modules/lab/lab.routes')
+    const upsertMock = vi.fn().mockResolvedValue({ id: BigInt(1) })
+    const prisma = fullMockPrisma({
+      labRequest: { findFirst: vi.fn().mockResolvedValue(OWN_REQUEST) },
+      labResult: { upsert: upsertMock },
+    })
+    const app = await buildApp(labRoutes, prisma)
+    const res = await app.inject({ method: 'PATCH', url: '/api/lab/request/1/result', payload: { isReady: false } })
+    expect(res.statusCode).toBe(200)
+    expect(upsertMock).toHaveBeenCalled()
+    await app.close()
+  })
+
+  it('GET /lab/history/:patientId untuk staf non-superadmin harus tetap discope ke cabang sendiri', async () => {
+    const { labRoutes } = await import('../../modules/lab/lab.routes')
+    const findManyMock = vi.fn().mockResolvedValue([])
+    const prisma = fullMockPrisma({ labRequest: { findMany: findManyMock } })
+    const app = await buildApp(labRoutes, prisma)
+    const res = await app.inject({ method: 'GET', url: '/api/lab/history/1' })
+    expect(res.statusCode).toBe(200)
+    const where = findManyMock.mock.calls[0][0].where
+    expect('branchId' in where).toBe(true)
+    await app.close()
+  })
+})

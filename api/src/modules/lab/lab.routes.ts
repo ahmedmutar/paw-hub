@@ -93,9 +93,10 @@ export async function labRoutes(app: FastifyInstance) {
   app.patch('/lab/request/:id/result', { preHandler: [authenticate] }, async (req: any, reply) => {
     const requestId = BigInt(req.params.id)
     const { templateType, resultData, resultFile, interpretation, isReady } = req.body as any
+    const { branchId, role } = req.authUser
 
-    const labRequest = await req.server.prisma.labRequest.findUnique({
-      where: { id: requestId },
+    const labRequest = await req.server.prisma.labRequest.findFirst({
+      where: { id: requestId, ...(role !== 'superadmin' && { branchId }) },
       include: { patient: { include: { owner: true } } },
     })
     if (!labRequest) return reply.status(404).send({ message: 'Request tidak ditemukan' })
@@ -127,8 +128,9 @@ export async function labRoutes(app: FastifyInstance) {
   // Riwayat lab per pasien
   app.get('/lab/history/:patientId', { preHandler: [authenticate] }, async (req: any, reply) => {
     const patientId = BigInt(req.params.patientId)
+    const { branchId, role } = req.authUser
     const requests = await req.server.prisma.labRequest.findMany({
-      where: { patientId },
+      where: { patientId, ...(role !== 'superadmin' && { branchId }) },
       orderBy: { createdAt: 'desc' },
       include: {
         requestedBy: { select: { fullname: true } },
