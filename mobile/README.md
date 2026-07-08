@@ -90,6 +90,15 @@ Modul back-office prioritas sedang/rendah:
   - **Kenapa tidak ada mobile**: kirim broadcast WA adalah aksi sekali-jalan yang mengirim pesan nyata ke berpotensi ratusan pelanggan sekaligus dan tidak bisa dibatalkan setelah terkirim — butuh review pesan & segmentasi yang tenang, bukan aksi cepat sambil jalan di klinik. Semua endpoint modul ini juga sudah `requireRole('admin')`, mirip Billing yang juga sengaja tidak ada di mobile karena sifatnya considered action, bukan kerja harian.
 - [ ] Audit log, Analytics/BI, Calendar sync — sudah dicek lewat riset dan bersih dari bug IDOR (semua query sudah scope dengan benar, tidak ada endpoint by-id yang rawan), jadi tidak ada pekerjaan security tersisa. Belum ada screen mobile untuk ketiganya — bisa dikerjakan kalau ada kebutuhan eksplisit.
 
+## Audit Keamanan Lanjutan (IDOR) — Babak 2
+
+Setelah 8 modul back-office di atas selesai diaudit, dilakukan full audit terhadap **30 modul backend yang belum pernah dicek sama sekali** (lewat 3 agen riset paralel). Hasilnya: **21 dari 30 modul punya bug IDOR nyata** — pola yang sama persis (endpoint by-id tanpa filter cabang/tenant, atau filter admin yang default ke `{}` kosong), kadang lebih parah dari yang sudah ditemukan. 9 modul dikonfirmasi bersih: Loyalty, Notifikasi, Portal (customer OTP), Onboarding, Tenant, Public-clinic, Symptom, Clinical, Auth.
+
+Setiap modul di bawah ini diperbaiki dengan proses TDD yang sama seperti babak 1 (test gagal dulu/RED → kode diperbaiki → test lolos/GREEN → full suite dicek lagi sebelum lanjut).
+
+- [x] User — **bug PALING PARAH dari seluruh audit** (babak 1 maupun 2): `POST /user/:id/reset-password` bisa reset password + hapus sesi aktif **akun siapapun di tenant manapun** tanpa cek kepemilikan sama sekali — account takeover penuh lintas tenant, cukup tebak ID. `PUT /user/:id` juga bisa mengubah `role` user tenant lain (privilege escalation), `PATCH /:id/toggle-status` dan `DELETE /:id` sama-sama tanpa cek tenant. `GET /user` (list) juga menerima query `branchId` mentah dari client tanpa verifikasi bahwa cabang itu milik tenant admin yang meminta. 7 test baru ditulis dari nol di `api/src/__tests__/routes/user.test.ts` (belum pernah ada test module ini sebelumnya) — RED 4/7 gagal, diperbaiki pakai `tenantFilter()` (model `User` punya kolom `tenantId` langsung) di semua 5 endpoint. Full suite: 35 file, 167/167 lolos. Sekalian menambahkan `tenantFilter` ke shared test helper `api/src/__tests__/helpers/mockAuth.ts` karena banyak modul berikutnya di audit ini juga akan butuh.
+  - Mobile: screen User yang sudah ada dari sebelumnya (lihat daftar/detail staf, edit kontak non-sensitif, toggle aktif, reset password) otomatis ikut aman begitu backend diperbaiki — tidak ada perubahan kode mobile yang diperlukan.
+
 ## Mode Ganda: Staf & Pemilik Hewan (Customer Portal)
 
 Atas permintaan agar biaya deployment tidak dobel, app ini sekarang punya **dua mode dalam satu aplikasi** — bukan app terpisah:

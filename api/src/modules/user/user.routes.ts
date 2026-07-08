@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
-import { authenticate, requireRole } from '../../middleware/auth'
+import { authenticate, requireRole, tenantFilter } from '../../middleware/auth'
 
 const createSchema = z.object({
   username:      z.string().min(3, 'Min 3 karakter'),
@@ -29,7 +29,14 @@ export async function userRoutes(app: FastifyInstance) {
   // GET /user — list user dengan filter
   app.get('/user', { preHandler: [authenticate, requireRole('admin')] }, async (req, reply) => {
     const q = req.query as any
-    const branchId = q.branchId ? BigInt(q.branchId) : req.authUser.branchId
+    let branchId: bigint
+    if (q.branchId) {
+      const targetBranch = await app.prisma.branch.findFirst({ where: { id: BigInt(q.branchId), ...tenantFilter(req.authUser) } })
+      if (!targetBranch) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
+      branchId = targetBranch.id
+    } else {
+      branchId = req.authUser.branchId
+    }
     const page  = Number(q.page  || 1)
     const limit = Number(q.limit || 20)
     const skip  = (page - 1) * limit
@@ -135,6 +142,9 @@ export async function userRoutes(app: FastifyInstance) {
       return reply.status(400).send({ message: 'Input tidak valid.', errors: body.error.flatten().fieldErrors })
     }
 
+    const existing = await app.prisma.user.findFirst({ where: { id: BigInt(id), ...tenantFilter(req.authUser) } })
+    if (!existing) return reply.status(404).send({ message: 'User tidak ditemukan.' })
+
     const user = await app.prisma.user.update({
       where: { id: BigInt(id) },
       data: {
@@ -154,7 +164,7 @@ export async function userRoutes(app: FastifyInstance) {
   // PATCH /user/:id/toggle-status — aktif/nonaktif langsung
   app.patch('/user/:id/toggle-status', { preHandler: [authenticate, requireRole('admin')] }, async (req, reply) => {
     const { id } = req.params as { id: string }
-    const user = await app.prisma.user.findUnique({ where: { id: BigInt(id) } })
+    const user = await app.prisma.user.findFirst({ where: { id: BigInt(id), ...tenantFilter(req.authUser) } })
     if (!user) return reply.status(404).send({ message: 'User tidak ditemukan.' })
 
     const updated = await app.prisma.user.update({
@@ -174,6 +184,9 @@ export async function userRoutes(app: FastifyInstance) {
     if (!newPassword || newPassword.length < 8) {
       return reply.status(400).send({ message: 'Password minimal 8 karakter.' })
     }
+    const existing = await app.prisma.user.findFirst({ where: { id: BigInt(id), ...tenantFilter(req.authUser) } })
+    if (!existing) return reply.status(404).send({ message: 'User tidak ditemukan.' })
+
     await app.prisma.user.update({
       where: { id: BigInt(id) },
       data: { password: await bcrypt.hash(newPassword, 12), updatedBy: req.authUser.username },
@@ -190,6 +203,9 @@ export async function userRoutes(app: FastifyInstance) {
     if (BigInt(id) === req.authUser.userId) {
       return reply.status(400).send({ message: 'Tidak bisa menghapus akun sendiri.' })
     }
+    const existing = await app.prisma.user.findFirst({ where: { id: BigInt(id), ...tenantFilter(req.authUser) } })
+    if (!existing) return reply.status(404).send({ message: 'User tidak ditemukan.' })
+
     await app.prisma.user.update({
       where: { id: BigInt(id) },
       data: { isDeleted: true, deletedAt: new Date(), deletedBy: req.authUser.username, status: false },
