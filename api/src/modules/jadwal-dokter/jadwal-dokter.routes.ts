@@ -77,6 +77,9 @@ export async function jadwalDokterRoutes(fastify: FastifyInstance) {
   }, async (req: any, reply) => {
     const id = BigInt(req.params.id)
     const { shiftStart, shiftEnd, maxPatients, isActive } = req.body as any
+    const existing = await prisma.doctorSchedule.findFirst({ where: { id, branchId: req.authUser.branchId } })
+    if (!existing) return reply.status(404).send({ message: 'Jadwal tidak ditemukan' })
+
     const schedule = await prisma.doctorSchedule.update({
       where: { id },
       data: { shiftStart, shiftEnd, maxPatients: maxPatients ? Number(maxPatients) : undefined, isActive },
@@ -88,7 +91,11 @@ export async function jadwalDokterRoutes(fastify: FastifyInstance) {
   fastify.delete('/jadwal-dokter/:id', {
     preHandler: [authenticate, requireRole('admin')],
   }, async (req: any, reply) => {
-    await prisma.doctorSchedule.delete({ where: { id: BigInt(req.params.id) } })
+    const id = BigInt(req.params.id)
+    const existing = await prisma.doctorSchedule.findFirst({ where: { id, branchId: req.authUser.branchId } })
+    if (!existing) return reply.status(404).send({ message: 'Jadwal tidak ditemukan' })
+
+    await prisma.doctorSchedule.delete({ where: { id } })
     return reply.send({ success: true })
   })
 
@@ -238,6 +245,9 @@ export async function jadwalDokterRoutes(fastify: FastifyInstance) {
     const id = BigInt(req.params.id)
     const { status } = req.body as { status: 'approved' | 'declined' }
     if (!['approved', 'declined'].includes(status)) return reply.status(400).send({ message: 'Status tidak valid' })
+
+    const existing = await prisma.doctorLeave.findFirst({ where: { id, branchId: req.authUser.branchId } })
+    if (!existing) return reply.status(404).send({ message: 'Data cuti tidak ditemukan' })
 
     await prisma.doctorLeave.update({
       where: { id },
