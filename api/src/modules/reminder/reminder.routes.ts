@@ -2,6 +2,15 @@ import { FastifyInstance } from 'fastify'
 import { authenticate, requireRole } from '../../middleware/auth'
 import { runReminderScan } from './reminder.service'
 
+// VaccinationRecord/DewormingRecord/ReminderLog tidak punya branchId
+// langsung — cuma lewat relasi patientId -> patient.branchId. Admin dikunci
+// ke seluruh cabang di tenant-nya, non-admin dikunci ke cabang sendiri.
+function reminderBranchFilter(user: any) {
+  return user.role === 'admin'
+    ? { patient: { branch: { tenantId: BigInt(user.tenantId) } } }
+    : { patient: { branchId: BigInt(user.branchId) } }
+}
+
 export async function reminderRoutes(app: FastifyInstance) {
 
   // ── GET /reminder/upcoming — hewan jatuh tempo N hari ke depan ──────────
@@ -16,7 +25,7 @@ export async function reminderRoutes(app: FastifyInstance) {
     const now  = new Date(); now.setHours(0, 0, 0, 0)
     const to   = new Date(now); to.setDate(to.getDate() + days)
 
-    const bf = req.authUser.role !== 'admin' ? { patient: { branchId: req.authUser.branchId } } : {}
+    const bf = reminderBranchFilter(req.authUser)
     const searchFilter = search
       ? { patient: { OR: [
           { petName:  { contains: search, mode: 'insensitive' as const } },
@@ -106,7 +115,7 @@ export async function reminderRoutes(app: FastifyInstance) {
     const in7   = new Date(now); in7.setDate(in7.getDate() + 7)
     const in30  = new Date(now); in30.setDate(in30.getDate() + 30)
 
-    const bf = req.authUser.role !== 'admin' ? { patient: { branchId: req.authUser.branchId } } : {}
+    const bf = reminderBranchFilter(req.authUser)
 
     const [vac7, dew7, vac30, dew30, sentToday, failed] = await Promise.all([
       app.prisma.vaccinationRecord.count({ where: { nextDueAt: { gte: now, lte: in7 },  ...bf } }),
@@ -114,9 +123,9 @@ export async function reminderRoutes(app: FastifyInstance) {
       app.prisma.vaccinationRecord.count({ where: { nextDueAt: { gte: now, lte: in30 }, ...bf } }),
       app.prisma.dewormingRecord.count({  where: { nextDueAt: { gte: now, lte: in30 }, ...bf } }),
       app.prisma.reminderLog.count({
-        where: { sentAt: { gte: now }, status: 'sent' },
+        where: { sentAt: { gte: now }, status: 'sent', ...bf },
       }),
-      app.prisma.reminderLog.count({ where: { status: 'failed' } }),
+      app.prisma.reminderLog.count({ where: { status: 'failed', ...bf } }),
     ])
 
     return reply.send({
@@ -139,6 +148,7 @@ export async function reminderRoutes(app: FastifyInstance) {
     const status = q.status as string | undefined
 
     const where: any = {
+      ...reminderBranchFilter(req.authUser),
       ...(type   ? { type }   : {}),
       ...(status ? { status } : {}),
     }
@@ -199,6 +209,11 @@ export async function reminderRoutes(app: FastifyInstance) {
     if (!['vaccination', 'deworming'].includes(type)) {
       return reply.status(400).send({ message: 'type harus vaccination atau deworming' })
     }
+
+    const bf = reminderBranchFilter(req.authUser)
+    const model: any = type === 'vaccination' ? app.prisma.vaccinationRecord : app.prisma.dewormingRecord
+    const record = await model.findFirst({ where: { id: BigInt(recordId), ...bf } })
+    if (!record) return reply.status(404).send({ message: 'Record tidak ditemukan' })
 
     // Reset log supaya bisa dikirim ulang
     await app.prisma.reminderLog.deleteMany({
