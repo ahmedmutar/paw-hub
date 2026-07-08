@@ -160,10 +160,10 @@ function StepAdmin({ form, setForm, errors }: any) {
 
 function StepPlan({ form, setForm, plans }: any) {
   const planColors: Record<string, string> = {
-    free: 'border-gray-300', starter: 'border-teal-400', pro: 'border-violet-400', enterprise: 'border-amber-400',
+    free: 'border-gray-300', starter: 'border-primary-400', pro: 'border-violet-400', enterprise: 'border-amber-400',
   }
   const planBadge: Record<string, string> = {
-    free: 'bg-gray-100 text-gray-600', starter: 'bg-teal-100 text-teal-700',
+    free: 'bg-gray-100 text-gray-600', starter: 'bg-primary-100 text-primary-700',
     pro: 'bg-violet-100 text-violet-700', enterprise: 'bg-amber-100 text-amber-700',
   }
 
@@ -173,7 +173,7 @@ function StepPlan({ form, setForm, plans }: any) {
       <div className="flex items-center justify-center gap-3">
         <span className={`text-sm ${form.cycle === 'monthly' ? 'font-semibold text-gray-800' : 'text-gray-400'}`}>Bulanan</span>
         <button onClick={() => setForm((f: any) => ({ ...f, cycle: f.cycle === 'monthly' ? 'yearly' : 'monthly' }))}
-          className={`relative w-12 h-6 rounded-full transition-colors ${form.cycle === 'yearly' ? 'bg-teal-500' : 'bg-gray-300'}`}>
+          className={`relative w-12 h-6 rounded-full transition-colors ${form.cycle === 'yearly' ? 'bg-primary-500' : 'bg-gray-300'}`}>
           <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.cycle === 'yearly' ? 'translate-x-6' : 'translate-x-0.5'}`} />
         </button>
         <span className={`text-sm ${form.cycle === 'yearly' ? 'font-semibold text-gray-800' : 'text-gray-400'}`}>
@@ -191,7 +191,7 @@ function StepPlan({ form, setForm, plans }: any) {
               className={`text-left p-4 rounded-xl border-2 transition-all ${selected ? `${planColors[plan.code]} ring-2 ring-offset-1 ${planColors[plan.code].replace('border-','ring-')} bg-white shadow-md` : 'border-gray-200 hover:border-gray-300'}`}>
               <div className="flex items-center justify-between mb-3">
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${planBadge[plan.code]}`}>{plan.name}</span>
-                {selected && <Check className="w-5 h-5 text-teal-600" />}
+                {selected && <Check className="w-5 h-5 text-primary-600" />}
               </div>
               <div className="mb-3">
                 {price === 0 ? (
@@ -210,7 +210,7 @@ function StepPlan({ form, setForm, plans }: any) {
               </ul>
               <div className="border-t pt-2 space-y-1">
                 {activeFeatures.map(f => (
-                  <p key={f} className="text-xs text-teal-600">✓ {FEATURE_LABELS[f] ?? f}</p>
+                  <p key={f} className="text-xs text-primary-600">✓ {FEATURE_LABELS[f] ?? f}</p>
                 ))}
               </div>
             </button>
@@ -227,8 +227,8 @@ function StepConfirm({ form, plans }: any) {
   const price = form.cycle === 'yearly' ? plan?.priceYearly : plan?.priceMonthly
   return (
     <div className="space-y-4">
-      <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 space-y-3">
-        <h3 className="font-semibold text-teal-800">Info Klinik</h3>
+      <div className="bg-primary-50 border border-primary-200 rounded-xl p-4 space-y-3">
+        <h3 className="font-semibold text-primary-800">Info Klinik</h3>
         <div className="grid grid-cols-2 gap-2 text-sm">
           <span className="text-gray-500">Nama</span><span className="font-medium">{form.clinicName}</span>
           <span className="text-gray-500">Slug</span><span className="font-medium">vetcore.app/{form.clinicSlug}</span>
@@ -320,12 +320,12 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-violet-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-100 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-2">
-            <div className="p-2 bg-teal-500 rounded-xl"><PawPrint className="w-6 h-6 text-white" /></div>
+            <div className="p-2 bg-primary-500 rounded-xl"><PawPrint className="w-6 h-6 text-white" /></div>
             <span className="text-2xl font-bold text-gray-800">VetCore</span>
           </div>
           <p className="text-gray-500 text-sm">Daftarkan klinik Anda — gratis 14 hari</p>
@@ -340,11 +340,11 @@ export default function OnboardingPage() {
             return (
               <div key={i} className="flex items-center">
                 <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all
-                  ${active ? 'bg-teal-500 text-white shadow-md' : done ? 'bg-teal-100 text-teal-600' : 'bg-gray-100 text-gray-400'}`}>
+                  ${active ? 'bg-primary-500 text-white shadow-md' : done ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-400'}`}>
                   {done ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
                   <span className="hidden sm:inline">{s.label}</span>
                 </div>
-                {i < STEPS.length - 1 && <div className={`w-8 h-0.5 ${i < step ? 'bg-teal-300' : 'bg-gray-200'}`} />}
+                {i < STEPS.length - 1 && <div className={`w-8 h-0.5 ${i < step ? 'bg-primary-300' : 'bg-gray-200'}`} />}
               </div>
             )
           })}
@@ -376,12 +376,12 @@ export default function OnboardingPage() {
             )}
 
             {step < 3 ? (
-              <button onClick={next} className="flex items-center gap-2 bg-teal-500 hover:bg-teal-600 text-white px-6 py-2.5 rounded-xl font-medium text-sm">
+              <button onClick={next} className="flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-white px-6 py-2.5 rounded-xl font-medium text-sm">
                 Lanjut <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
               <button onClick={submit} disabled={registerMut.isPending}
-                className="flex items-center gap-2 bg-teal-500 hover:bg-teal-600 disabled:opacity-60 text-white px-6 py-2.5 rounded-xl font-medium text-sm">
+                className="flex items-center gap-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-60 text-white px-6 py-2.5 rounded-xl font-medium text-sm">
                 {registerMut.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Mendaftarkan...</> : <><Sparkles className="w-4 h-4" /> Daftarkan Klinik</>}
               </button>
             )}
@@ -393,7 +393,7 @@ export default function OnboardingPage() {
 
       {/* Utility classes via tailwind (inline for readability) */}
       <style>{`
-        .input { @apply w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500; }
+        .input { @apply w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500; }
         .label { @apply block text-sm font-medium text-gray-700 mb-1; }
         .err   { @apply text-xs text-red-500 mt-1; }
       `}</style>
