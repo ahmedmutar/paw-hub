@@ -24,8 +24,8 @@ export async function reviewRoutes(fastify: FastifyInstance) {
     const { registrationId } = req.body as { registrationId: string }
     const regId = BigInt(registrationId)
 
-    const reg = await prisma.registration.findUnique({
-      where: { id: regId },
+    const reg = await prisma.registration.findFirst({
+      where: { id: regId, branchId: req.authUser.branchId },
       include: {
         patient: { include: { owner: true } },
         doctor: true,
@@ -188,6 +188,10 @@ export async function reviewRoutes(fastify: FastifyInstance) {
   }, async (req: any, reply) => {
     const id = BigInt(req.params.id)
     const { isPublished } = req.body as { isPublished: boolean }
+
+    const existing = await prisma.reviewRecord.findFirst({ where: { id, branchId: req.authUser.branchId } })
+    if (!existing) return reply.status(404).send({ message: 'Ulasan tidak ditemukan' })
+
     await prisma.reviewRecord.update({ where: { id }, data: { isPublished } })
     return reply.send({ success: true })
   })
