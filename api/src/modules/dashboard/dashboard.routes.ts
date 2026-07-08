@@ -1,10 +1,19 @@
 import { FastifyInstance } from 'fastify'
 import { authenticate } from '../../middleware/auth'
 
+// Registration/CheckUpResult/ListOfItem tidak punya tenantId langsung —
+// cuma branchId. Admin dikunci ke seluruh cabang di tenant-nya, non-admin
+// dikunci ke cabang sendiri.
+function dashboardBranchFilter(user: any) {
+  return user.role === 'admin'
+    ? { branch: { tenantId: BigInt(user.tenantId) } }
+    : { branchId: BigInt(user.branchId) }
+}
+
 export async function dashboardRoutes(app: FastifyInstance) {
   app.get('/dashboard/stats', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
+    const branchFilter = dashboardBranchFilter(user)
 
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999)
