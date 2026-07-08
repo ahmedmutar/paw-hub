@@ -129,6 +129,9 @@ Setiap modul di bawah ini diperbaiki dengan proses TDD yang sama seperti babak 1
 
 **Ke-8 modul HIGH (Pembayaran, Pasien, Telemed, Registrasi & Rawat Inap, Grooming, Jadwal Dokter, Gudang, Pet Hotel) sudah selesai diperbaiki.** Lanjut ke modul-modul MEDIUM severity.
 
+- [x] Laporan — tidak ada endpoint by-id, tapi keempat endpoint laporan keuangan (`/laporan/harian`, `/bulanan`, `/rekap`, `/ringkasan`) pakai where kosong `{}` untuk admin — karena model `Expense` tidak punya `tenantId` langsung, itu bocor omzet, pengeluaran, dan laba-rugi ke semua tenant untuk siapapun yang login sebagai admin. 5 test baru di `api/src/__tests__/routes/laporan.test.ts` (RED 5/5 gagal), diperbaiki dengan helper baru `laporanBranchFilter()` (admin -> `branch.tenantId`, non-admin -> `branchId`) diterapkan ke query `expense` dan `listOfPayment` (lewat relasi `checkUpResult.registration`) di keempat endpoint. Full suite: 41 file, 270/270 lolos.
+  - Mobile: screen Laporan Keuangan yang sudah ada dari sebelumnya (tab Harian/Bulanan) otomatis ikut aman — tidak ada perubahan kode mobile yang diperlukan.
+
 ## Mode Ganda: Staf & Pemilik Hewan (Customer Portal)
 
 Atas permintaan agar biaya deployment tidak dobel, app ini sekarang punya **dua mode dalam satu aplikasi** — bukan app terpisah:

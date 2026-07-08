@@ -43,17 +43,20 @@ const PAYMENT_INCLUDE = {
   },
 }
 
+// Expense tidak punya tenantId langsung — cuma branchId. Admin dikunci ke
+// seluruh cabang di tenant-nya, non-admin dikunci ke cabang sendiri.
+function laporanBranchFilter(user: any) {
+  return user.role === 'admin'
+    ? { branch: { tenantId: BigInt(user.tenantId) } }
+    : { branchId: BigInt(user.branchId) }
+}
+
 function buildPaymentWhere(branchFilter: any, start: Date, end: Date) {
-  const where: any = {
+  return {
     isDeleted: false,
     createdAt: { gte: start, lte: end },
+    checkUpResult: { registration: { ...branchFilter } },
   }
-  if (branchFilter.branchId) {
-    where.checkUpResult = {
-      registration: { branchId: branchFilter.branchId },
-    }
-  }
-  return where
 }
 
 function buildExpenseWhere(branchFilter: any, start: Date, end: Date) {
@@ -78,7 +81,7 @@ export async function laporanRoutes(app: FastifyInstance) {
   // ══════════════════════════════════════════════════════════════════════
   app.get('/laporan/harian', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
+    const branchFilter = laporanBranchFilter(user)
 
     const { date } = req.query as any
     const d = date ? new Date(date) : new Date()
@@ -166,7 +169,7 @@ export async function laporanRoutes(app: FastifyInstance) {
   // ══════════════════════════════════════════════════════════════════════
   app.get('/laporan/bulanan', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
+    const branchFilter = laporanBranchFilter(user)
 
     const now = new Date()
     const { month = String(now.getMonth() + 1), year = String(now.getFullYear()) } = req.query as any
@@ -327,7 +330,7 @@ export async function laporanRoutes(app: FastifyInstance) {
   // ══════════════════════════════════════════════════════════════════════
   app.get('/laporan/rekap', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
+    const branchFilter = laporanBranchFilter(user)
 
     const now = new Date()
     const currentMonth = now.getMonth()
@@ -453,7 +456,7 @@ export async function laporanRoutes(app: FastifyInstance) {
   // ══════════════════════════════════════════════════════════════════════
   app.get('/laporan/ringkasan', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
+    const branchFilter = laporanBranchFilter(user)
     const { year = String(new Date().getFullYear()) } = req.query as any
     const y = parseInt(year)
 
