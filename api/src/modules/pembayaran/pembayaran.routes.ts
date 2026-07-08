@@ -26,6 +26,17 @@ const createSchema = z.object({
   })).optional().default([]),
 })
 
+// ListOfPayment/CheckUpResult tidak punya branchId langsung — cuma bisa
+// dicek lewat relasi registration.branchId. Modul ini tidak punya pola
+// tenant-wide untuk admin (list mengunci SEMUA role ke branchId sendiri),
+// jadi filter kepemilikannya konsisten dikunci ke branchId sendiri.
+function paymentBranchFilter(user: any) {
+  return { checkUpResult: { registration: { branchId: BigInt(user.branchId) } } }
+}
+function checkUpBranchFilter(user: any) {
+  return { registration: { branchId: BigInt(user.branchId) } }
+}
+
 export async function pembayaranRoutes(app: FastifyInstance) {
   // List payments
   app.get('/pembayaran', { preHandler: authenticate }, async (req, reply) => {
@@ -79,7 +90,7 @@ export async function pembayaranRoutes(app: FastifyInstance) {
   app.get('/pembayaran/:id', { preHandler: authenticate }, async (req, reply) => {
     const { id } = req.params as { id: string }
     const payment = await app.prisma.listOfPayment.findFirst({
-      where: { id: BigInt(id), isDeleted: false },
+      where: { id: BigInt(id), isDeleted: false, ...paymentBranchFilter(req.authUser) },
       include: {
         checkUpResult: {
           include: {
@@ -125,7 +136,7 @@ export async function pembayaranRoutes(app: FastifyInstance) {
     if (!body.success) return reply.status(400).send({ message: 'Input tidak valid.', errors: body.error.flatten().fieldErrors })
 
     const checkUpId = BigInt(body.data.checkUpResultId)
-    const checkUp = await app.prisma.checkUpResult.findFirst({ where: { id: checkUpId, isDeleted: false } })
+    const checkUp = await app.prisma.checkUpResult.findFirst({ where: { id: checkUpId, isDeleted: false, ...checkUpBranchFilter(req.authUser) } })
     if (!checkUp) return reply.status(404).send({ message: 'Data pemeriksaan tidak ditemukan.' })
     if (checkUp.statusPaidOff) return reply.status(400).send({ message: 'Pemeriksaan ini sudah dibayar.' })
 
@@ -268,6 +279,9 @@ export async function pembayaranRoutes(app: FastifyInstance) {
   // Delete payment
   app.delete('/pembayaran/:id', { preHandler: [authenticate, requireRole('admin')] }, async (req, reply) => {
     const { id } = req.params as { id: string }
+    const existing = await app.prisma.listOfPayment.findFirst({ where: { id: BigInt(id), ...paymentBranchFilter(req.authUser) } })
+    if (!existing) return reply.status(404).send({ message: 'Pembayaran tidak ditemukan.' })
+
     await app.prisma.$transaction(async (tx) => {
       const p = await tx.listOfPayment.findUnique({ where: { id: BigInt(id) }, include: { paymentItems: true, paymentServices: true, paymentMedicineGroups: true } })
       if (!p) throw new Error('Pembayaran tidak ditemukan.')
@@ -296,13 +310,12 @@ export async function pembayaranRoutes(app: FastifyInstance) {
   // ─── Antrian kasir: checkups selesai yang belum dibayar ────────────────────
   app.get('/pembayaran/antrian-kasir', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
 
     const data = await app.prisma.checkUpResult.findMany({
       where: {
         isDeleted: false,
         statusPaidOff: false,
-        registration: { ...branchFilter, isDeleted: false },
+        registration: { branchId: BigInt(user.branchId), isDeleted: false },
       },
       include: {
         registration: {
@@ -348,7 +361,7 @@ export async function pembayaranRoutes(app: FastifyInstance) {
     const { checkUpId } = req.params as any
 
     const checkUp = await app.prisma.checkUpResult.findFirst({
-      where: { id: BigInt(checkUpId), isDeleted: false },
+      where: { id: BigInt(checkUpId), isDeleted: false, ...checkUpBranchFilter(req.authUser) },
       include: {
         registration: {
           include: {
@@ -400,7 +413,6 @@ export async function pembayaranRoutes(app: FastifyInstance) {
   // ─── Stats untuk dashboard ────────────────────────────────────────────────
   app.get('/pembayaran/stats', { preHandler: [authenticate] }, async (req, reply) => {
     const user = (req as any).authUser
-    const branchFilter = user.role === 'admin' ? {} : { branchId: BigInt(user.branchId) }
 
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999)
@@ -410,7 +422,7 @@ export async function pembayaranRoutes(app: FastifyInstance) {
         where: {
           isDeleted: false,
           createdAt: { gte: todayStart, lte: todayEnd },
-          checkUpResult: { registration: { ...branchFilter } },
+          ...paymentBranchFilter(user),
         },
         include: {
           paymentItems:    { select: { detailItemPatient: { select: { priceOverall: true } } } },
@@ -419,7 +431,7 @@ export async function pembayaranRoutes(app: FastifyInstance) {
         },
       }),
       app.prisma.checkUpResult.count({
-        where: { isDeleted: false, statusPaidOff: false, registration: { ...branchFilter } },
+        where: { isDeleted: false, statusPaidOff: false, registration: { branchId: BigInt(user.branchId) } },
       }),
     ])
 

@@ -110,6 +110,9 @@ Setiap modul di bawah ini diperbaiki dengan proses TDD yang sama seperti babak 1
 
 **Ke-6 modul CRITICAL (User, Rekam Medis, Pemeriksaan, Export, Appointment, Lab) sudah selesai diperbaiki.** Lanjut ke modul-modul HIGH severity.
 
+- [x] Pembayaran — `GET /pembayaran/:id` (detail invoice), `GET /pembayaran/tagihan/:checkUpId` (tagihan kasir), dan `POST /pembayaran` (buat pembayaran dari `checkUpResultId` yang dikirim client) semuanya tidak filter `branchId` sama sekali — staf cabang manapun bisa lihat invoice cabang lain atau membuat pembayaran yang menempel ke pemeriksaan cabang lain. `DELETE /pembayaran/:id` melakukan `findUnique` di dalam transaksi tanpa cek kepemilikan cabang sama sekali (cuma cek record ada atau tidak). Selain itu `GET /pembayaran/antrian-kasir` dan `GET /pembayaran/stats` untuk admin pakai where kosong `{}`, padahal endpoint list utama (`GET /pembayaran`) sudah benar mengunci SEMUA role (termasuk admin) ke `branchId` sendiri — pola tidak konsisten di file yang sama. Model `ListOfPayment`/`CheckUpResult` tidak punya `branchId` langsung, cuma lewat relasi `registration.branchId`. 7 test baru di `api/src/__tests__/routes/pembayaran.test.ts` (RED 6/7 gagal), diperbaiki dengan helper `paymentBranchFilter()`/`checkUpBranchFilter()` diterapkan ke 6 endpoint yang bolong, konsisten dikunci ke `branchId` sendiri (bukan tenant-wide) mengikuti pola yang sudah ada di list endpoint. Full suite: 39 file, 212/212 lolos.
+  - Mobile: screen Pembayaran/Kasir yang sudah ada dari sebelumnya (antrian tagihan, rincian, pilih metode bayar, diskon, proses bayar) otomatis ikut aman — tidak ada perubahan kode mobile yang diperlukan.
+
 ## Mode Ganda: Staf & Pemilik Hewan (Customer Portal)
 
 Atas permintaan agar biaya deployment tidak dobel, app ini sekarang punya **dua mode dalam satu aplikasi** — bukan app terpisah:
