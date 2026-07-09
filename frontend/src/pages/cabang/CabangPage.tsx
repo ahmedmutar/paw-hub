@@ -141,7 +141,7 @@ function BranchModal({ branch, onSuccess }: { branch?: Branch; onSuccess: () => 
           {/* Instruksi pembayaran */}
           <Textarea
             label="Instruksi Pembayaran"
-            placeholder="cth: Transfer ke BCA 1234567890 a/n PawCare Clinic"
+            placeholder="cth: Transfer ke BCA 1234567890 a/n Paw Hub Clinic"
             rows={2}
             {...register('paymentInstruction')}
           />

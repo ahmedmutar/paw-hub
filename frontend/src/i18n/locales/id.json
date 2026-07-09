@@ -3,7 +3,7 @@
     "language": "Bahasa"
   },
   "login": {
-    "brand": "PawCare",
+    "brand": "Paw Hub",
     "tagline": "Sistem Manajemen Klinik Hewan",
     "title": "Masuk ke akun Anda",
     "username": "Username",
@@ -12,10 +12,10 @@
     "passwordPlaceholder": "Masukkan password",
     "submit": "Masuk",
     "defaultError": "Terjadi kesalahan. Coba lagi.",
-    "footer": "© 2025 PawCare Clinic System"
+    "footer": "© 2025 Paw Hub Clinic System"
   },
   "onboarding": {
-    "brand": "VetCore",
+    "brand": "Paw Hub",
     "tagline": "Daftarkan klinik Anda — gratis 14 hari",
     "steps": {
       "clinic": "Info Klinik",
@@ -33,9 +33,9 @@
     },
     "clinic": {
       "name": "Nama Klinik",
-      "namePlaceholder": "ex: PawCare Clinic",
+      "namePlaceholder": "ex: Paw Hub Clinic",
       "slug": "Slug URL",
-      "slugPlaceholder": "pawcare-clinic",
+      "slugPlaceholder": "pawhub-clinic",
       "slugChecking": "Memeriksa ketersediaan...",
       "slugAvailable": "✓ Slug tersedia",
       "slugTaken": "✗ Slug sudah digunakan",
@@ -89,7 +89,7 @@
       "price": "Harga",
       "trial": "Trial",
       "trialValue": "14 hari gratis",
-      "terms": "Dengan mendaftar, Anda menyetujui Syarat & Ketentuan VetCore."
+      "terms": "Dengan mendaftar, Anda menyetujui Syarat & Ketentuan Paw Hub."
     },
     "nav": {
       "back": "Kembali",
@@ -107,7 +107,7 @@
       "adminPassword": "Password minimal 8 karakter",
       "generic": "Terjadi kesalahan. Coba lagi."
     },
-    "footer": "VetCore © {{year}} · Sistem Manajemen Klinik Hewan"
+    "footer": "Paw Hub © {{year}} · Sistem Manajemen Klinik Hewan"
   },
   "landing": {
     "nav": {
@@ -123,7 +123,7 @@
       "greeting": "🐾 Halo, dokter hewan & owner klinik!",
       "titlePrefix": "Capek urus klinik pakai",
       "titleHighlight": "buku & Excel?",
-      "desc": "PawCare ngumpulin rekam medis, antrian, kasir, gudang, sampai laporan bisnis klinik hewan kamu jadi satu tempat — biar waktu kamu lebih banyak buat pasien, bukan admin.",
+      "desc": "Paw Hub ngumpulin rekam medis, antrian, kasir, gudang, sampai laporan bisnis klinik hewan kamu jadi satu tempat — biar waktu kamu lebih banyak buat pasien, bukan admin.",
       "ctaAuthenticated": "Buka Dashboard",
       "ctaGuest": "Coba Sekarang, Gratis",
       "secondaryCta": "Lihat cara kerjanya",
@@ -131,7 +131,7 @@
     },
     "painPoints": {
       "title": "Kalau ini masih kejadian di klinik kamu...",
-      "desc": "Mungkin udah waktunya ganti cara kerja. Ini yang biasanya berubah begitu klinik pindah ke PawCare:",
+      "desc": "Mungkin udah waktunya ganti cara kerja. Ini yang biasanya berubah begitu klinik pindah ke Paw Hub:",
       "items": [
         { "before": "Catatan pasien masih di buku, dicari 10 menit tiap kali dibutuhin", "after": "Tinggal ketik nama atau ID, rekam medis langsung muncul" },
         { "before": "Reminder vaksin sering kelewat, pasien jadi telat kontrol", "after": "WhatsApp reminder jalan sendiri, nggak perlu diingat manual" },
@@ -156,8 +156,8 @@
       ]
     },
     "story": {
-      "quote": "Kami bikin PawCare karena sering lihat teman-teman dokter hewan masih sibuk mindahin catatan dari buku ke Excel tiap malam, padahal waktu itu harusnya bisa dipakai istirahat atau buat pasien berikutnya. Jadi kami coba bikin satu tempat yang beresin urusan administrasi klinik, biar yang di depan meja periksa bisa fokus ke hal yang memang butuh mereka: merawat hewannya.",
-      "author": "Tim PawCare",
+      "quote": "Kami bikin Paw Hub karena sering lihat teman-teman dokter hewan masih sibuk mindahin catatan dari buku ke Excel tiap malam, padahal waktu itu harusnya bisa dipakai istirahat atau buat pasien berikutnya. Jadi kami coba bikin satu tempat yang beresin urusan administrasi klinik, biar yang di depan meja periksa bisa fokus ke hal yang memang butuh mereka: merawat hewannya.",
+      "author": "Tim Paw Hub",
       "authorNote": "dibangun sambil ngobrol langsung sama klinik-klinik kecil"
     },
     "testimonials": {
@@ -198,8 +198,8 @@
       "loginLink": "Udah punya akun? Masuk"
     },
     "footer": {
-      "brand": "PawCare Clinic System",
-      "copyright": "© 2025 PawCare. Dibuat untuk klinik hewan Indonesia.",
+      "brand": "Paw Hub Clinic System",
+      "copyright": "© 2025 Paw Hub. Dibuat untuk klinik hewan Indonesia.",
       "booking": "Booking",
       "register": "Daftar",
       "login": "Masuk"

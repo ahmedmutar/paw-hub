@@ -27,7 +27,7 @@ export default function LoginScreen() {
           <View style={styles.logoCircle}>
             <Image source={require('../../assets/logo-icon-white.png')} style={styles.logoImage} resizeMode="contain" />
           </View>
-          <Text style={styles.brand}>PawCare</Text>
+          <Text style={styles.brand}>Paw Hub</Text>
           <Text style={styles.subtitle}>Sistem Manajemen Klinik Hewan</Text>
         </View>
 
@@ -42,7 +42,7 @@ export default function LoginScreen() {
 
         {mode === 'staff' ? <StaffLoginForm /> : <CustomerLoginForm />}
 
-        <Text style={styles.footer}>© 2025 PawCare Clinic System</Text>
+        <Text style={styles.footer}>© 2025 Paw Hub Clinic System</Text>
       </ScrollView>
     </KeyboardAvoidingView>
   )

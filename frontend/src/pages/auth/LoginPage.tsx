@@ -60,7 +60,7 @@ export default function LoginPage() {
             className="w-16 h-16 rounded-2xl flex items-center justify-center p-3 mb-4"
             style={{ background: 'var(--orange)', boxShadow: '0 6px 20px rgba(255,122,61,.4)' }}
           >
-            <img src="/logo-icon-white.svg" alt="PawCare" className="w-full h-full" />
+            <img src="/logo-icon-white.svg" alt="Paw Hub" className="w-full h-full" />
           </div>
           <h1 className="font-display font-black text-2xl" style={{ color: 'var(--text-dark)' }}>
             {t('login.brand')}

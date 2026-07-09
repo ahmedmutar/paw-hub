@@ -12,7 +12,7 @@ async function main() {
     update: {},
     create: {
       branchCode: 'PUSAT',
-      branchName: 'PawCare Clinic Pusat',
+      branchName: 'Paw Hub Clinic Pusat',
       address: 'Jl. Contoh No. 1, Jakarta',
       phoneNumber: '021-12345678',
     },

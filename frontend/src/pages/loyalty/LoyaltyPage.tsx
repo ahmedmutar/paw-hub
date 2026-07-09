@@ -80,7 +80,7 @@ function MemberDetailModal({ ownerId, onClose }: { ownerId: string; onClose: () 
           {/* Member card */}
           <div className={`rounded-2xl p-5 text-white bg-gradient-to-br ${member.tier === 'gold' ? 'from-amber-500 to-yellow-600' : member.tier === 'silver' ? 'from-slate-500 to-gray-600' : 'from-teal-500 to-teal-700'}`}>
             <div className="flex items-center justify-between mb-4">
-              <span className="text-sm opacity-80">VetCore Loyalty</span>
+              <span className="text-sm opacity-80">Paw Hub Loyalty</span>
               <TierBadge tier={member.tier} />
             </div>
             <p className="text-3xl font-bold">{fmt(member.totalPoints)} <span className="text-lg font-normal opacity-80">poin</span></p>

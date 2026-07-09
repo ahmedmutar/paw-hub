@@ -496,7 +496,7 @@ export default function BookingPage() {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          Powered by VetCore — Sistem Manajemen Klinik Hewan
+          Powered by Paw Hub — Sistem Manajemen Klinik Hewan
         </p>
       </div>
     </div>

@@ -36,7 +36,7 @@ export async function telemedRoutes(app: FastifyInstance) {
     // Notify doctor
     if (FONNTE_TOKEN && session.doctor.phoneNumber) {
       sendWA(session.doctor.phoneNumber,
-        `*Permintaan Konsultasi Online*\n\nPasien: ${session.patient.petName}\nPemilik: ${session.owner.ownerName}\nKeluhan: ${complaint}\n\nSilakan konfirmasi di sistem VetCore.`)
+        `*Permintaan Konsultasi Online*\n\nPasien: ${session.patient.petName}\nPemilik: ${session.owner.ownerName}\nKeluhan: ${complaint}\n\nSilakan konfirmasi di sistem Paw Hub.`)
     }
 
     return reply.status(201).send({ data: session })

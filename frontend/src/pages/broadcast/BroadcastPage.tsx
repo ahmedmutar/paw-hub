@@ -185,7 +185,7 @@ export default function BroadcastPage() {
                   Pesan <span className="text-gray-400 font-normal">— gunakan {'{nama}'} untuk nama owner</span>
                 </label>
                 <textarea rows={6} value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
-                  placeholder="Halo {nama}, kami dari Klinik Hewan PawCare ingin menginfokan..."
+                  placeholder="Halo {nama}, kami dari Klinik Hewan Paw Hub ingin menginfokan..."
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none" />
                 <p className="text-xs text-gray-400 mt-1">{form.message.length} karakter</p>
               </div>

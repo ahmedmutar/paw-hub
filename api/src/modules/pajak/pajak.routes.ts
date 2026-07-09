@@ -142,7 +142,7 @@ export async function pajakRoutes(app: FastifyInstance) {
       fetch('https://api.fonnte.com/send', {
         method: 'POST',
         headers: { Authorization: FONNTE_TOKEN, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target: phone, message: `*Pengingat Laporan Pajak*\n\nBatas waktu pelaporan SPT Masa PPh 21 adalah tanggal 20 bulan ini. Silakan ekspor laporan dari sistem VetCore dan laporkan ke DJP Online.` }),
+        body: JSON.stringify({ target: phone, message: `*Pengingat Laporan Pajak*\n\nBatas waktu pelaporan SPT Masa PPh 21 adalah tanggal 20 bulan ini. Silakan ekspor laporan dari sistem Paw Hub dan laporkan ke DJP Online.` }),
       }).catch(() => {})
     }
     return reply.send({ message: 'Reminder terkirim' })

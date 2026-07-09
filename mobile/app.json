@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "PawCare",
+    "name": "Paw Hub",
     "slug": "pawcare-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -24,7 +24,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "PawCare butuh akses kamera untuk memindai barcode item gudang."
+          "cameraPermission": "Paw Hub butuh akses kamera untuk memindai barcode item gudang."
         }
       ]
     ]

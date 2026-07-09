@@ -57,7 +57,7 @@ function DashboardMockup() {
         <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--red)' }} />
         <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--yellow)' }} />
         <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--green)' }} />
-        <span className="ml-2 text-[10px] font-bold" style={{ color: 'var(--text-soft)' }}>pawcare.app/dashboard</span>
+        <span className="ml-2 text-[10px] font-bold" style={{ color: 'var(--text-soft)' }}>pawhub.app/dashboard</span>
       </div>
       <div className="grid grid-cols-3 gap-2 mb-3">
         {[
@@ -192,10 +192,10 @@ function Navbar() {
             className="w-9 h-9 rounded-xl flex items-center justify-center p-1.5"
             style={{ background: 'var(--orange)', boxShadow: '0 3px 10px rgba(255,122,61,.3)' }}
           >
-            <img src="/logo-icon-white.svg" alt="PawCare" className="w-full h-full" />
+            <img src="/logo-icon-white.svg" alt="Paw Hub" className="w-full h-full" />
           </div>
           <span className="font-display font-black text-lg" style={{ color: 'var(--text-dark)' }}>
-            PawCare
+            Paw Hub
           </span>
         </a>
 
@@ -641,7 +641,7 @@ function Footer() {
             className="w-8 h-8 rounded-xl flex items-center justify-center p-1.5"
             style={{ background: 'var(--orange)' }}
           >
-            <img src="/logo-icon-white.svg" alt="PawCare" className="w-full h-full" />
+            <img src="/logo-icon-white.svg" alt="Paw Hub" className="w-full h-full" />
           </div>
           <span className="font-display font-black text-sm" style={{ color: 'var(--text-dark)' }}>
             {t('landing.footer.brand')}

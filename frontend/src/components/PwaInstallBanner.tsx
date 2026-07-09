@@ -30,7 +30,7 @@ export default function PwaInstallBanner() {
         <Download className="w-5 h-5 text-teal-600" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-gray-800 text-sm">Install VetCore</p>
+        <p className="font-semibold text-gray-800 text-sm">Install Paw Hub</p>
         <p className="text-xs text-gray-500 mt-0.5">Akses lebih cepat langsung dari layar utama.</p>
         <div className="flex gap-2 mt-2">
           <button onClick={install}

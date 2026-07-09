@@ -174,7 +174,7 @@ export default function PublicClinicPage() {
       </main>
 
       <footer className="text-center py-6 text-xs text-gray-400 border-t">
-        <p>Powered by <strong className="text-teal-600">VetCore</strong> — Sistem Manajemen Klinik Hewan</p>
+        <p>Powered by <strong className="text-teal-600">Paw Hub</strong> — Sistem Manajemen Klinik Hewan</p>
       </footer>
     </div>
   )

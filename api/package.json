@@ -1,7 +1,7 @@
 {
   "name": "vetclinic-api",
   "version": "2.0.0",
-  "description": "PawCare Clinic API — Fastify + Prisma + PostgreSQL",
+  "description": "Paw Hub Clinic API — Fastify + Prisma + PostgreSQL",
   "main": "dist/app.js",
   "scripts": {
     "dev": "tsx watch src/app.ts",

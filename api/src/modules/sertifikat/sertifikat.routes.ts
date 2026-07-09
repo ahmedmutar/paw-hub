@@ -108,7 +108,7 @@ export async function sertifikatRoutes(fastify: FastifyInstance) {
     const doctor = rec.checkUpResult?.doctor
     const certNum = `VAKSIN/${rec.id}/${new Date(rec.administeredAt).getFullYear()}`
     const date = new Date(rec.administeredAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
-    const qrText = `${process.env.APP_URL ?? 'https://vetcore.id'}/verify/vaksin/${rec.id}`
+    const qrText = `${process.env.APP_URL ?? 'https://pawhub.id'}/verify/vaksin/${rec.id}`
 
     const body = [
       `Yang bertanda tangan di bawah ini menerangkan bahwa:`,
@@ -150,7 +150,7 @@ export async function sertifikatRoutes(fastify: FastifyInstance) {
     const patient = rec.registration.patient
     const certNum = `SKS/${rec.id}/${new Date(rec.createdAt).getFullYear()}`
     const date = new Date(rec.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
-    const qrText = `${process.env.APP_URL ?? 'https://vetcore.id'}/verify/sehat/${rec.id}`
+    const qrText = `${process.env.APP_URL ?? 'https://pawhub.id'}/verify/sehat/${rec.id}`
 
     const body = [
       `Yang bertanda tangan di bawah ini menerangkan bahwa:`,
@@ -195,7 +195,7 @@ export async function sertifikatRoutes(fastify: FastifyInstance) {
     const doctor = rec.checkUpResult?.doctor
     const certNum = `PROS/${rec.id}/${new Date(rec.performedAt).getFullYear()}`
     const date = new Date(rec.performedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
-    const qrText = `${process.env.APP_URL ?? 'https://vetcore.id'}/verify/prosedur/${rec.id}`
+    const qrText = `${process.env.APP_URL ?? 'https://pawhub.id'}/verify/prosedur/${rec.id}`
 
     const body = [
       `Yang bertanda tangan di bawah ini menerangkan bahwa:`,

@@ -1,4 +1,4 @@
-// Disamakan persis dengan frontend/src/index.css agar identitas PawCare konsisten
+// Disamakan persis dengan frontend/src/index.css agar identitas Paw Hub konsisten
 export const colors = {
   cream: '#FFF8F0',
   warmBg: '#FFF2E4',

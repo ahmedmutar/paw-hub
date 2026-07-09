@@ -43,7 +43,7 @@ export default function BarcodeScanScreen() {
     return (
       <View style={styles.center}>
         <Text style={{ fontSize: 40, marginBottom: 12 }}>📷</Text>
-        <Text style={styles.permText}>PawCare butuh akses kamera untuk memindai barcode.</Text>
+        <Text style={styles.permText}>Paw Hub butuh akses kamera untuk memindai barcode.</Text>
         <TouchableOpacity style={styles.permBtn} onPress={requestPermission}>
           <Text style={styles.permBtnText}>Izinkan Kamera</Text>
         </TouchableOpacity>

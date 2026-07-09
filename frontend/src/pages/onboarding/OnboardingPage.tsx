@@ -59,7 +59,7 @@ function StepClinic({ form, setForm, errors }: any) {
       <div>
         <label className="label">{t('onboarding.clinic.slug')} <span className="text-red-500">*</span></label>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400 bg-gray-50 border rounded-l-lg px-3 py-2 border-r-0">pawcare.app/</span>
+          <span className="text-sm text-gray-400 bg-gray-50 border rounded-l-lg px-3 py-2 border-r-0">pawhub.app/</span>
           <input value={form.clinicSlug} onChange={e => {
             const v = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
             setForm((f: any) => ({ ...f, clinicSlug: v }))
@@ -229,7 +229,7 @@ function StepConfirm({ form, plans }: any) {
         <h3 className="font-semibold text-primary-800">{t('onboarding.confirm.clinicInfo')}</h3>
         <div className="grid grid-cols-2 gap-2 text-sm">
           <span className="text-gray-500">{t('onboarding.confirm.name')}</span><span className="font-medium">{form.clinicName}</span>
-          <span className="text-gray-500">{t('onboarding.confirm.slug')}</span><span className="font-medium">vetcore.app/{form.clinicSlug}</span>
+          <span className="text-gray-500">{t('onboarding.confirm.slug')}</span><span className="font-medium">pawhub.app/{form.clinicSlug}</span>
           <span className="text-gray-500">{t('onboarding.confirm.email')}</span><span className="font-medium">{form.clinicEmail}</span>
           {form.clinicPhone && <><span className="text-gray-500">{t('onboarding.confirm.phone')}</span><span className="font-medium">{form.clinicPhone}</span></>}
         </div>

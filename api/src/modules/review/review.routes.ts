@@ -50,7 +50,7 @@ export async function reviewRoutes(fastify: FastifyInstance) {
       },
     })
 
-    const appUrl = process.env.APP_URL ?? 'https://vetcore.id'
+    const appUrl = process.env.APP_URL ?? 'https://pawhub.id'
     const msg = `Halo ${owner.ownerName} 👋\n\nBagaimana pengalaman kunjungan *${reg.patient.petName}* ke klinik kami?\n\nBerikan penilaian di sini:\n${appUrl}/review/${token}\n\nCukup ketuk tautan di atas dan pilih bintang 1-5. Terima kasih! 🐾`
 
     sendWA(owner.phoneNumber, msg).catch(() => {})
@@ -98,7 +98,7 @@ export async function reviewRoutes(fastify: FastifyInstance) {
         },
       }).catch(() => null)
 
-      const appUrl = process.env.APP_URL ?? 'https://vetcore.id'
+      const appUrl = process.env.APP_URL ?? 'https://pawhub.id'
       const msg = `Halo ${reg.patient.owner.ownerName} 👋\n\nBagaimana pengalaman *${reg.patient.petName}* kemarin?\n\nBerikan penilaian: ${appUrl}/review/${token}\n\nTerima kasih! 🐾`
       sendWA(reg.patient.owner.phoneNumber, msg).catch(() => {})
       sent++

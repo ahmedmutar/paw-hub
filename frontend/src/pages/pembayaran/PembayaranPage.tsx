@@ -303,7 +303,7 @@ function TagihanModal({ checkUpId, onClose, onSuccess }: {
       {/* Hidden print template */}
       <div className="hidden">
         <div ref={printRef}>
-          <h3>🐾 PawCare Clinic</h3>
+          <h3>🐾 Paw Hub Clinic</h3>
           <p className="center">{format(new Date(), 'd MMM yyyy HH:mm', { locale: localeId })}</p>
           <div className="divider" />
           {tagihan && (

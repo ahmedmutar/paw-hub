@@ -72,7 +72,7 @@ export async function portalRoutes(app: FastifyInstance) {
       data: { ownerId: owner.id, otp, expiresAt },
     })
 
-    const waMsg = `*VetCore* — Kode OTP Anda:\n\n*${otp}*\n\nKode ini berlaku selama 5 menit. Jangan bagikan kepada siapapun.`
+    const waMsg = `*Paw Hub* — Kode OTP Anda:\n\n*${otp}*\n\nKode ini berlaku selama 5 menit. Jangan bagikan kepada siapapun.`
 
     sendWhatsapp(app.prisma, {
       phone:         owner.phoneNumber!,

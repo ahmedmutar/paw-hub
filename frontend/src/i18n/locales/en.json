@@ -3,7 +3,7 @@
     "language": "Language"
   },
   "login": {
-    "brand": "PawCare",
+    "brand": "Paw Hub",
     "tagline": "Veterinary Clinic Management System",
     "title": "Sign in to your account",
     "username": "Username",
@@ -12,10 +12,10 @@
     "passwordPlaceholder": "Enter your password",
     "submit": "Sign In",
     "defaultError": "Something went wrong. Please try again.",
-    "footer": "© 2025 PawCare Clinic System"
+    "footer": "© 2025 Paw Hub Clinic System"
   },
   "onboarding": {
-    "brand": "VetCore",
+    "brand": "Paw Hub",
     "tagline": "Register your clinic — free for 14 days",
     "steps": {
       "clinic": "Clinic Info",
@@ -33,9 +33,9 @@
     },
     "clinic": {
       "name": "Clinic Name",
-      "namePlaceholder": "e.g. PawCare Clinic",
+      "namePlaceholder": "e.g. Paw Hub Clinic",
       "slug": "URL Slug",
-      "slugPlaceholder": "pawcare-clinic",
+      "slugPlaceholder": "pawhub-clinic",
       "slugChecking": "Checking availability...",
       "slugAvailable": "✓ Slug available",
       "slugTaken": "✗ Slug already taken",
@@ -89,7 +89,7 @@
       "price": "Price",
       "trial": "Trial",
       "trialValue": "14 days free",
-      "terms": "By registering, you agree to VetCore's Terms & Conditions."
+      "terms": "By registering, you agree to Paw Hub's Terms & Conditions."
     },
     "nav": {
       "back": "Back",
@@ -107,7 +107,7 @@
       "adminPassword": "Password must be at least 8 characters",
       "generic": "Something went wrong. Please try again."
     },
-    "footer": "VetCore © {{year}} · Veterinary Clinic Management System"
+    "footer": "Paw Hub © {{year}} · Veterinary Clinic Management System"
   },
   "landing": {
     "nav": {
@@ -123,7 +123,7 @@
       "greeting": "🐾 Hey there, vets & clinic owners!",
       "titlePrefix": "Tired of running your clinic with",
       "titleHighlight": "notebooks & Excel?",
-      "desc": "PawCare brings medical records, queues, checkout, inventory, and business reports for your vet clinic into one place — so you spend more time with patients, not paperwork.",
+      "desc": "Paw Hub brings medical records, queues, checkout, inventory, and business reports for your vet clinic into one place — so you spend more time with patients, not paperwork.",
       "ctaAuthenticated": "Open Dashboard",
       "ctaGuest": "Try It Now, Free",
       "secondaryCta": "See how it works",
@@ -131,7 +131,7 @@
     },
     "painPoints": {
       "title": "If this still happens at your clinic...",
-      "desc": "It might be time for a change. Here's what usually shifts once a clinic moves to PawCare:",
+      "desc": "It might be time for a change. Here's what usually shifts once a clinic moves to Paw Hub:",
       "items": [
         { "before": "Patient records still on paper, takes 10 minutes to find every time", "after": "Just type a name or ID, the medical record shows up instantly" },
         { "before": "Vaccine reminders often missed, patients come back late", "after": "WhatsApp reminders run automatically, no need to remember manually" },
@@ -156,8 +156,8 @@
       ]
     },
     "story": {
-      "quote": "We built PawCare because we kept seeing fellow vets stuck copying notes from paper to Excel every night, when that time could've gone to rest or the next patient instead. So we set out to build one place that handles the clinic's admin work, so the people at the exam table can focus on what actually needs them: caring for the animal.",
-      "author": "The PawCare Team",
+      "quote": "We built Paw Hub because we kept seeing fellow vets stuck copying notes from paper to Excel every night, when that time could've gone to rest or the next patient instead. So we set out to build one place that handles the clinic's admin work, so the people at the exam table can focus on what actually needs them: caring for the animal.",
+      "author": "The Paw Hub Team",
       "authorNote": "built while talking directly with small clinics"
     },
     "testimonials": {
@@ -198,8 +198,8 @@
       "loginLink": "Already have an account? Sign in"
     },
     "footer": {
-      "brand": "PawCare Clinic System",
-      "copyright": "© 2025 PawCare. Made for veterinary clinics in Indonesia.",
+      "brand": "Paw Hub Clinic System",
+      "copyright": "© 2025 Paw Hub. Made for veterinary clinics in Indonesia.",
       "booking": "Booking",
       "register": "Register",
       "login": "Sign In"

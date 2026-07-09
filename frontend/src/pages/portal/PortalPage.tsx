@@ -515,7 +515,7 @@ function PrintModal({ payment: p, petName, onClose }: { payment: Payment; petNam
         </div>
         <div className="px-5 py-4 space-y-3 text-sm" id="print-receipt">
           <div className="text-center">
-            <p className="font-bold text-lg">VetCore Clinic</p>
+            <p className="font-bold text-lg">Paw Hub Clinic</p>
             <p className="text-gray-500 text-xs">{p.branch}</p>
           </div>
           <div className="border-t border-dashed border-gray-300 pt-3 space-y-1">

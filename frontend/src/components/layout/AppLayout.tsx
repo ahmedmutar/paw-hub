@@ -111,10 +111,10 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
             className="w-9 h-9 rounded-xl flex items-center justify-center p-1.5"
             style={{ background: 'var(--orange)', boxShadow: '0 3px 10px rgba(255,122,61,.3)' }}
           >
-            <img src="/logo-icon-white.svg" alt="PawCare" className="w-full h-full" />
+            <img src="/logo-icon-white.svg" alt="Paw Hub" className="w-full h-full" />
           </div>
           <div className="leading-tight">
-            <p className="font-display font-black text-sm" style={{ color: 'var(--orange)' }}>PawCare</p>
+            <p className="font-display font-black text-sm" style={{ color: 'var(--orange)' }}>Paw Hub</p>
             <p className="text-[10px] font-bold" style={{ color: 'var(--text-soft)' }}>Clinic System</p>
           </div>
         </Link>

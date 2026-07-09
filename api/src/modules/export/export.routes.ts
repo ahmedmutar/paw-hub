@@ -23,7 +23,7 @@ function buildInvoicePdf(payment: any): Promise<Buffer> {
     const w = doc.page.width - 72
 
     // Header
-    doc.font('Helvetica-Bold').fontSize(18).text('VetCore', 36, 36)
+    doc.font('Helvetica-Bold').fontSize(18).text('Paw Hub', 36, 36)
     const branch = payment.checkUpResult?.registration?.branch ?? {}
     doc.font('Helvetica').fontSize(9).fillColor('#555')
        .text(branch.branchName ?? '-', 36, 58)
@@ -122,7 +122,7 @@ function buildInvoicePdf(payment: any): Promise<Buffer> {
 // ── Excel: Laporan ────────────────────────────────────────────────────────────
 async function buildLaporanExcel(data: { title: string; rows: any[]; payments: any[] }): Promise<Buffer> {
   const wb   = new ExcelJS.Workbook()
-  wb.creator = 'VetCore'
+  wb.creator = 'Paw Hub'
 
   const ws = wb.addWorksheet('Ringkasan', { properties: { tabColor: { argb: '14B8A6' } } })
   ws.columns = [{ width: 22 }, { width: 16 }, { width: 16 }, { width: 18 }]
@@ -331,7 +331,7 @@ export async function exportRoutes(app: FastifyInstance) {
     })
 
     const wb = new ExcelJS.Workbook()
-    wb.creator = 'VetCore'
+    wb.creator = 'Paw Hub'
     const ws = wb.addWorksheet('Data Pasien')
     ws.columns = [
       { width: 6,  header: 'No.'       },

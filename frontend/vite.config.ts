@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'logo-icon.svg'],
       manifest: {
-        name: 'PawCare — Klinik Hewan',
-        short_name: 'PawCare',
+        name: 'Paw Hub — Klinik Hewan',
+        short_name: 'Paw Hub',
         description: 'Sistem Manajemen Klinik Hewan Terintegrasi',
         theme_color: '#FF7A3D',
         background_color: '#ffffff',

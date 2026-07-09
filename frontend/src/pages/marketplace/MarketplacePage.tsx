@@ -54,7 +54,7 @@ function ConnectModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =
           <div>
             <label className="text-xs font-medium text-gray-600">Nama Toko</label>
             <input value={form.shopName} onChange={e => setForm(p => ({ ...p, shopName: e.target.value }))}
-              className="w-full border rounded-lg px-3 py-2 text-sm mt-1" placeholder="PawCare Official Store" />
+              className="w-full border rounded-lg px-3 py-2 text-sm mt-1" placeholder="Paw Hub Official Store" />
           </div>
           <div>
             <label className="text-xs font-medium text-gray-600">Shop ID</label>
