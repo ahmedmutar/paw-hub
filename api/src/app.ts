@@ -83,11 +83,15 @@ if (isProduction) {
   }
 }
 
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',').map((o) => o.trim())
+  : null
+
 async function bootstrap() {
   await app.register(helmet, { contentSecurityPolicy: false })
 
   await app.register(cors, {
-    origin: process.env.FRONTEND_URL || true,
+    origin: allowedOrigins ?? true,
     credentials: true,
   })
 
