@@ -1,0 +1,208 @@
+{
+  "common": {
+    "language": "Language"
+  },
+  "login": {
+    "brand": "PawCare",
+    "tagline": "Veterinary Clinic Management System",
+    "title": "Sign in to your account",
+    "username": "Username",
+    "usernamePlaceholder": "Enter your username",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "submit": "Sign In",
+    "defaultError": "Something went wrong. Please try again.",
+    "footer": "© 2025 PawCare Clinic System"
+  },
+  "onboarding": {
+    "brand": "VetCore",
+    "tagline": "Register your clinic — free for 14 days",
+    "steps": {
+      "clinic": "Clinic Info",
+      "admin": "Admin Account",
+      "plan": "Choose Plan",
+      "confirm": "Confirm"
+    },
+    "featureLabels": {
+      "whatsapp": "WhatsApp Notifications",
+      "booking": "Online Booking",
+      "grooming": "Grooming Module",
+      "reminder": "Automatic Reminders",
+      "portal": "Owner Portal",
+      "priority_support": "Priority Support"
+    },
+    "clinic": {
+      "name": "Clinic Name",
+      "namePlaceholder": "e.g. PawCare Clinic",
+      "slug": "URL Slug",
+      "slugPlaceholder": "pawcare-clinic",
+      "slugChecking": "Checking availability...",
+      "slugAvailable": "✓ Slug available",
+      "slugTaken": "✗ Slug already taken",
+      "email": "Clinic Email",
+      "emailPlaceholder": "info@yourclinic.com",
+      "phone": "Phone Number",
+      "phonePlaceholder": "0812xxxxxxxx",
+      "address": "Clinic Address",
+      "addressPlaceholder": "Street address..."
+    },
+    "admin": {
+      "name": "Admin Full Name",
+      "namePlaceholder": "Your name",
+      "username": "Username",
+      "usernamePlaceholder": "your_username",
+      "password": "Password",
+      "passwordPlaceholder": "Min. 8 characters",
+      "email": "Admin Email",
+      "emailPlaceholder": "admin@email.com",
+      "phone": "Admin Phone Number",
+      "phonePlaceholder": "0812xxxxxxxx"
+    },
+    "plan": {
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "yearlySave": "(save ~17%)",
+      "free": "Free",
+      "perYear": "/year",
+      "perMonth": "/month",
+      "branchesUnlimited": "Unlimited branches",
+      "branches": "{{count}} branches",
+      "usersUnlimited": "Unlimited users",
+      "users": "{{count}} users",
+      "patientsUnlimited": "Unlimited patients",
+      "patients": "{{count}} patients",
+      "trialNote": "Every plan starts with a <bold>14-day free trial</bold>. No credit card required."
+    },
+    "confirm": {
+      "clinicInfo": "Clinic Info",
+      "name": "Name",
+      "slug": "Slug",
+      "email": "Email",
+      "phone": "Phone",
+      "adminAccount": "Admin Account",
+      "username": "Username",
+      "planChosen": "Chosen Plan",
+      "plan": "Plan",
+      "cycle": "Billing Cycle",
+      "cycleMonthly": "Monthly",
+      "cycleYearly": "Yearly",
+      "price": "Price",
+      "trial": "Trial",
+      "trialValue": "14 days free",
+      "terms": "By registering, you agree to VetCore's Terms & Conditions."
+    },
+    "nav": {
+      "back": "Back",
+      "next": "Next",
+      "submit": "Register Clinic",
+      "submitting": "Registering...",
+      "haveAccount": "Already have an account?"
+    },
+    "errors": {
+      "clinicName": "Clinic name is required",
+      "clinicSlug": "Slug is required",
+      "clinicEmail": "Email is required",
+      "adminName": "Admin name is required",
+      "adminUsername": "Username is required",
+      "adminPassword": "Password must be at least 8 characters",
+      "generic": "Something went wrong. Please try again."
+    },
+    "footer": "VetCore © {{year}} · Veterinary Clinic Management System"
+  },
+  "landing": {
+    "nav": {
+      "features": "Features",
+      "story": "Our Story",
+      "howItWorks": "How It Works",
+      "faq": "FAQ",
+      "login": "Sign In",
+      "tryFree": "Try Free",
+      "dashboard": "Open Dashboard"
+    },
+    "hero": {
+      "greeting": "🐾 Hey there, vets & clinic owners!",
+      "titlePrefix": "Tired of running your clinic with",
+      "titleHighlight": "notebooks & Excel?",
+      "desc": "PawCare brings medical records, queues, checkout, inventory, and business reports for your vet clinic into one place — so you spend more time with patients, not paperwork.",
+      "ctaAuthenticated": "Open Dashboard",
+      "ctaGuest": "Try It Now, Free",
+      "secondaryCta": "See how it works",
+      "noCreditCard": "No credit card needed. Set up yourself in ~5 minutes."
+    },
+    "painPoints": {
+      "title": "If this still happens at your clinic...",
+      "desc": "It might be time for a change. Here's what usually shifts once a clinic moves to PawCare:",
+      "items": [
+        { "before": "Patient records still on paper, takes 10 minutes to find every time", "after": "Just type a name or ID, the medical record shows up instantly" },
+        { "before": "Vaccine reminders often missed, patients come back late", "after": "WhatsApp reminders run automatically, no need to remember manually" },
+        { "before": "Medicine stock suddenly runs out right when it's busiest", "after": "Get notified the moment stock starts running low" },
+        { "before": "Monthly cash and report recaps can take all night", "after": "Just open the dashboard, every number is already calculated" },
+        { "before": "Phone keeps ringing for bookings, front desk overwhelmed", "after": "Pet owners book their own appointments from their phone" }
+      ]
+    },
+    "flagship": {
+      "title": "What clinics use the most",
+      "desc": "Not a long feature list that overwhelms you — these three are the ones that make the biggest difference day to day.",
+      "items": [
+        { "tag": "Medical Records", "title": "Patient history, never lost again", "desc": "Every visit, diagnosis, and prescription is automatically saved to each pet's profile. A substitute vet can instantly understand the history without asking the owner from scratch." },
+        { "tag": "Booking & WhatsApp", "title": "Let pet owners manage their own schedule", "desc": "Share the booking link on Instagram or your clinic's WhatsApp. Once scheduled, reminders are sent automatically a day before — cutting down on empty slots and no-shows." },
+        { "tag": "Business Reports", "title": "Know your clinic's condition without manual counting", "desc": "Daily revenue, visit trends, down to your best-selling services — all readable from one screen. No more opening Excel at the end of the month." }
+      ],
+      "moreLabel": "...and there are a few more modules if your clinic needs them:",
+      "moreFeatures": [
+        "Inpatient Care & Pet Hotel", "Grooming & Pet Shop", "Inventory Management", "Telemedicine",
+        "Lab Management", "Loyalty & Reviews", "Multi-Branch", "Checkout & Billing",
+        "Real-time Queue", "Business Intelligence"
+      ]
+    },
+    "story": {
+      "quote": "We built PawCare because we kept seeing fellow vets stuck copying notes from paper to Excel every night, when that time could've gone to rest or the next patient instead. So we set out to build one place that handles the clinic's admin work, so the people at the exam table can focus on what actually needs them: caring for the animal.",
+      "author": "The PawCare Team",
+      "authorNote": "built while talking directly with small clinics"
+    },
+    "testimonials": {
+      "title": "What our users say",
+      "desc": "Not template testimonials — this is what they actually said.",
+      "items": [
+        { "quote": "I used to have to manually count the day's income every time I closed the register, sometimes until 9pm. Now I just open the dashboard and the numbers are already sorted out.", "name": "Dr. Sarah Amelia", "role": "Meong Sehat Clinic, Bandung" },
+        { "quote": "What I feel the most is the automatic WhatsApp reminder. Patients who used to be late for their vaccine boosters miss it far less often now.", "name": "Hendra Wijaya", "role": "Owner, Pet Care 24 Surabaya" },
+        { "quote": "Online booking has drastically cut down incoming calls. Our front desk team can now focus more on the patients who walk in.", "name": "Dr. Rizky Pratama", "role": "Private Practice, Jakarta" }
+      ]
+    },
+    "howItWorks": {
+      "title": "Getting started is easy",
+      "desc": "No multi-day training, no complicated installation.",
+      "steps": [
+        { "title": "Register your clinic", "desc": "Fill in your clinic name and create an admin account. Takes less than 5 minutes." },
+        { "title": "Set up your services", "desc": "Add branches, services, products, and your team to match your clinic." },
+        { "title": "Start running", "desc": "Take your first patient, the system helps remember the rest." }
+      ]
+    },
+    "faq": {
+      "title": "Frequently asked questions",
+      "items": [
+        { "q": "Can I really try it for free first?", "a": "Absolutely. Sign up and try the core features first, no credit card needed upfront." },
+        { "q": "Is my clinic's data safe?", "a": "Yes. Each clinic's data is fully separated from other clinics, with automatic daily backups." },
+        { "q": "My clinic has 3 branches, is that supported?", "a": "Yes. All branches can be monitored from a single account, with reports viewable combined or per branch." },
+        { "q": "Do I need to install a special app?", "a": "No need. Just open a browser on your laptop or phone, and you're ready to go." },
+        { "q": "What if I get stuck while using it?", "a": "Just chat with our support team on WhatsApp, we usually reply fast." }
+      ]
+    },
+    "finalCta": {
+      "titleAuthenticated": "Let's get back to your clinic",
+      "titleGuest": "Go ahead, give it a try. It's free.",
+      "descAuthenticated": "Your dashboard is waiting for you to continue.",
+      "descGuest": "No big commitment needed. Try it for 5 minutes, and continue if it fits.",
+      "ctaAuthenticated": "Open Dashboard",
+      "ctaGuest": "Try It Free Now",
+      "loginLink": "Already have an account? Sign in"
+    },
+    "footer": {
+      "brand": "PawCare Clinic System",
+      "copyright": "© 2025 PawCare. Made for veterinary clinics in Indonesia.",
+      "booking": "Booking",
+      "register": "Register",
+      "login": "Sign In"
+    }
+  }
+}

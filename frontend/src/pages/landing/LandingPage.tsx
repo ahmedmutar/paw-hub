@@ -1,96 +1,32 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   ClipboardList, BedDouble, CalendarDays, MessageSquare, Scissors,
   Package, BarChart3, Video, Star, Building2, CreditCard, FlaskConical,
   ChevronDown, Menu, X, ArrowRight, LayoutDashboard, Check, XIcon,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 
-// ─── Data ───────────────────────────────────────────────────────────────────
+// ─── Data (non-translatable parts: styling accents, icons, mock ids) ────────
 
-const PAIN_POINTS = [
-  { before: 'Catatan pasien masih di buku, dicari 10 menit tiap kali dibutuhin', after: 'Tinggal ketik nama atau ID, rekam medis langsung muncul' },
-  { before: 'Reminder vaksin sering kelewat, pasien jadi telat kontrol', after: 'WhatsApp reminder jalan sendiri, nggak perlu diingat manual' },
-  { before: 'Stok obat tau-tau habis pas lagi ramai-ramainya', after: 'Ada notifikasi begitu stok mulai menipis' },
-  { before: 'Rekap kas & laporan bulanan bisa makan waktu semalaman', after: 'Tinggal buka dashboard, semua angka udah kehitung' },
-  { before: 'Telepon masuk terus buat booking, resepsionis kewalahan', after: 'Pemilik hewan booking sendiri dari HP-nya' },
+const FLAGSHIP_META = [
+  { accent: 'orange', mock: 'medis' },
+  { accent: 'teal', mock: 'booking' },
+  { accent: 'purple', mock: 'laporan' },
+] as const
+
+// Order matches en/id `landing.flagship.moreFeatures`
+const MORE_FEATURES_ICON_LIST = [
+  BedDouble, Scissors, Package, Video, FlaskConical, Star, Building2, CreditCard, ClipboardList, BarChart3,
 ]
 
-const FLAGSHIP = [
-  {
-    tag: 'Rekam Medis',
-    title: 'Riwayat pasien, nggak pernah hilang lagi',
-    desc: 'Setiap kunjungan, diagnosa, dan resep otomatis tersimpan di profil masing-masing hewan. Dokter pengganti pun bisa langsung paham riwayatnya tanpa nanya-nanya pemilik dari awal.',
-    accent: 'orange',
-    mock: 'medis',
-  },
-  {
-    tag: 'Booking & WhatsApp',
-    title: 'Biar pemilik hewan yang atur jadwalnya sendiri',
-    desc: 'Link booking bisa disebar ke Instagram atau WA klinik. Begitu dijadwalkan, reminder otomatis terkirim H-1 — jadi jadwal kosong dan pasien lupa datang berkurang banyak.',
-    accent: 'teal',
-    mock: 'booking',
-  },
-  {
-    tag: 'Laporan Bisnis',
-    title: 'Tau kondisi klinik tanpa harus hitung manual',
-    desc: 'Omzet harian, tren kunjungan, sampai layanan paling laku — semua kebaca dari satu layar. Nggak perlu lagi buka Excel di akhir bulan.',
-    accent: 'purple',
-    mock: 'laporan',
-  },
-]
-
-const MORE_FEATURES = [
-  { icon: BedDouble,     label: 'Rawat Inap & Pet Hotel' },
-  { icon: Scissors,      label: 'Grooming & Pet Shop' },
-  { icon: Package,       label: 'Gudang & Inventori' },
-  { icon: Video,         label: 'Telemedicine' },
-  { icon: FlaskConical,  label: 'Manajemen Lab' },
-  { icon: Star,          label: 'Loyalty & Ulasan' },
-  { icon: Building2,     label: 'Multi-Cabang' },
-  { icon: CreditCard,    label: 'Kasir & Billing' },
-  { icon: ClipboardList, label: 'Antrian Real-time' },
-  { icon: BarChart3,     label: 'Business Intelligence' },
-]
-
-const TESTIMONIALS = [
-  {
-    quote: 'Dulu tiap tutup kasir saya harus hitung manual pemasukan hari itu, kadang sampai jam 9 malam. Sekarang tinggal buka dashboard, angkanya udah rapi semua.',
-    name: 'drg. Sarah Amelia',
-    role: 'Klinik Meong Sehat, Bandung',
-    emoji: '👩‍⚕️',
-    bg: 'orange',
-  },
-  {
-    quote: 'Yang paling kerasa itu reminder WA otomatis. Pasien yang biasanya telat vaksin ulang jadi jauh lebih jarang kelewat sekarang.',
-    name: 'Hendra Wijaya',
-    role: 'Owner, Pet Care 24 Surabaya',
-    emoji: '🧑‍💼',
-    bg: 'teal',
-  },
-  {
-    quote: 'Booking online-nya bikin telepon masuk berkurang drastis. Tim resepsionis jadi bisa lebih fokus melayani yang datang langsung.',
-    name: 'drg. Rizky Pratama',
-    role: 'Praktik Mandiri, Jakarta',
-    emoji: '👨‍⚕️',
-    bg: 'purple',
-  },
-]
-
-const STEPS = [
-  { title: 'Daftar klinik', desc: 'Isi nama klinik dan buat akun admin. Nggak sampai 5 menit.' },
-  { title: 'Atur layanan',  desc: 'Tambahin cabang, layanan, produk, dan tim sesuai klinik kamu.' },
-  { title: 'Mulai jalan',   desc: 'Terima pasien pertama, sisanya biar sistem yang bantu ingat.' },
-]
-
-const FAQS = [
-  { q: 'Emang bisa coba gratis dulu?', a: 'Bisa banget. Daftar dan coba fitur-fitur utamanya dulu, nggak perlu masukin kartu kredit di awal.' },
-  { q: 'Data klinik saya aman nggak?', a: 'Aman. Data tiap klinik terpisah penuh dari klinik lain, dan ada backup otomatis tiap hari.' },
-  { q: 'Klinik saya ada 3 cabang, bisa?', a: 'Bisa. Semua cabang bisa dipantau dari satu akun, laporannya bisa dilihat gabungan atau per cabang.' },
-  { q: 'Perlu install aplikasi khusus?', a: 'Nggak perlu. Tinggal buka browser di laptop atau HP, langsung bisa dipakai.' },
-  { q: 'Kalau tiba-tiba bingung pas pakai, gimana?', a: 'Tinggal chat tim support kami di WhatsApp, biasanya dibalas cepat.' },
-]
+const TESTIMONIAL_META = [
+  { emoji: '👩‍⚕️', bg: 'orange' },
+  { emoji: '🧑‍💼', bg: 'teal' },
+  { emoji: '👨‍⚕️', bg: 'purple' },
+] as const
 
 const ACCENT: Record<string, { bg: string; fg: string; border: string }> = {
   orange: { bg: 'var(--orange-lt)', fg: 'var(--orange)', border: 'var(--peach)' },
@@ -111,6 +47,7 @@ function SquiggleUnderline({ color = 'var(--orange)' }: { color?: string }) {
 // ─── Mockup snippets (fake dashboard screenshots) ──────────────────────────
 
 function DashboardMockup() {
+  const { t } = useTranslation()
   return (
     <div
       className="relative w-full max-w-sm mx-auto rounded-2xl p-4"
@@ -156,7 +93,7 @@ function DashboardMockup() {
         className="absolute -right-6 -bottom-5 px-3 py-2 rounded-xl text-[10px] font-bold"
         style={{ background: '#fff', border: '1.5px solid var(--border)', boxShadow: '0 8px 20px rgba(45,27,14,.15)', transform: 'rotate(4deg)', color: 'var(--text-mid)' }}
       >
-        ✨ ini tampilan asli, bukan mockup doang
+        ✨ {t('landing.hero.mockupNote', 'ini tampilan asli, bukan mockup doang')}
       </div>
     </div>
   )
@@ -235,13 +172,14 @@ const MOCKS: Record<string, () => JSX.Element> = { medis: MedisMockup, booking: 
 // ─── Components ─────────────────────────────────────────────────────────────
 
 function Navbar() {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const links = [
-    { label: 'Fitur', href: '#fitur' },
-    { label: 'Cerita Kami', href: '#cerita' },
-    { label: 'Cara Kerja', href: '#cara-kerja' },
-    { label: 'FAQ', href: '#faq' },
+    { label: t('landing.nav.features'), href: '#fitur' },
+    { label: t('landing.nav.story'), href: '#cerita' },
+    { label: t('landing.nav.howItWorks'), href: '#cara-kerja' },
+    { label: t('landing.nav.faq'), href: '#faq' },
   ]
   return (
     <header
@@ -275,13 +213,14 @@ function Navbar() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2.5">
+          <LanguageSwitcher />
           {isAuthenticated ? (
             <Link
               to="/dashboard"
               className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-bold text-white transition-all hover:-translate-y-px"
               style={{ background: 'var(--orange)', boxShadow: '0 4px 14px rgba(255,122,61,.35)' }}
             >
-              <LayoutDashboard className="w-3.5 h-3.5" /> Buka Dashboard
+              <LayoutDashboard className="w-3.5 h-3.5" /> {t('landing.nav.dashboard')}
             </Link>
           ) : (
             <>
@@ -290,26 +229,29 @@ function Navbar() {
                 className="px-4 py-2 rounded-full text-sm font-bold transition-colors hover:bg-white"
                 style={{ color: 'var(--text-mid)' }}
               >
-                Masuk
+                {t('landing.nav.login')}
               </Link>
               <Link
                 to="/daftar"
                 className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-bold text-white transition-all hover:-translate-y-px"
                 style={{ background: 'var(--orange)', boxShadow: '0 4px 14px rgba(255,122,61,.35)' }}
               >
-                Coba Gratis <ArrowRight className="w-3.5 h-3.5" />
+                {t('landing.nav.tryFree')} <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </>
           )}
         </div>
 
-        <button
-          onClick={() => setOpen((p) => !p)}
-          className="md:hidden w-9 h-9 rounded-lg flex items-center justify-center"
-          style={{ color: 'var(--text-dark)' }}
-        >
-          {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="md:hidden flex items-center gap-2">
+          <LanguageSwitcher />
+          <button
+            onClick={() => setOpen((p) => !p)}
+            className="w-9 h-9 rounded-lg flex items-center justify-center"
+            style={{ color: 'var(--text-dark)' }}
+          >
+            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
       {open && (
@@ -322,15 +264,15 @@ function Navbar() {
           <div className="flex gap-2 mt-2">
             {isAuthenticated ? (
               <Link to="/dashboard" className="flex-1 text-center px-4 py-2.5 rounded-full text-sm font-bold text-white" style={{ background: 'var(--orange)' }}>
-                Buka Dashboard
+                {t('landing.nav.dashboard')}
               </Link>
             ) : (
               <>
                 <Link to="/login" className="flex-1 text-center px-4 py-2.5 rounded-full text-sm font-bold border-2" style={{ borderColor: 'var(--border)', color: 'var(--text-mid)' }}>
-                  Masuk
+                  {t('landing.nav.login')}
                 </Link>
                 <Link to="/daftar" className="flex-1 text-center px-4 py-2.5 rounded-full text-sm font-bold text-white" style={{ background: 'var(--orange)' }}>
-                  Coba Gratis
+                  {t('landing.nav.tryFree')}
                 </Link>
               </>
             )}
@@ -342,6 +284,7 @@ function Navbar() {
 }
 
 function Hero() {
+  const { t } = useTranslation()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   return (
     <section id="top" className="relative overflow-hidden">
@@ -353,15 +296,15 @@ function Hero() {
       <div className="max-w-6xl mx-auto px-4 lg:px-6 pt-14 pb-20 lg:pt-20 lg:pb-24 relative grid lg:grid-cols-2 gap-12 items-center">
         <div>
           <p className="text-sm font-extrabold mb-3" style={{ color: 'var(--orange)' }}>
-            🐾 Halo, dokter hewan &amp; owner klinik!
+            {t('landing.hero.greeting')}
           </p>
           <h1
             className="font-display font-black leading-[1.1]"
             style={{ color: 'var(--text-dark)', fontSize: 'clamp(2rem, 4.5vw, 3.2rem)' }}
           >
-            Capek urus klinik pakai{' '}
+            {t('landing.hero.titlePrefix')}{' '}
             <span className="relative inline-block">
-              <span style={{ color: 'var(--orange)' }}>buku &amp; Excel?</span>
+              <span style={{ color: 'var(--orange)' }}>{t('landing.hero.titleHighlight')}</span>
               <span className="absolute left-0 -bottom-1 w-full"><SquiggleUnderline /></span>
             </span>
           </h1>
@@ -370,8 +313,7 @@ function Hero() {
             className="mt-5 text-base font-medium max-w-md leading-relaxed"
             style={{ color: 'var(--text-soft)' }}
           >
-            PawCare ngumpulin rekam medis, antrian, kasir, gudang, sampai laporan bisnis
-            klinik hewan kamu jadi satu tempat — biar waktu kamu lebih banyak buat pasien, bukan admin.
+            {t('landing.hero.desc')}
           </p>
 
           <div className="mt-7 flex flex-col sm:flex-row gap-3">
@@ -380,20 +322,20 @@ function Hero() {
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full text-sm font-bold text-white transition-all hover:-translate-y-0.5"
               style={{ background: 'var(--orange)', boxShadow: '0 6px 20px rgba(255,122,61,.4)' }}
             >
-              {isAuthenticated ? 'Buka Dashboard' : 'Coba Sekarang, Gratis'} <ArrowRight className="w-4 h-4" />
+              {isAuthenticated ? t('landing.hero.ctaAuthenticated') : t('landing.hero.ctaGuest')} <ArrowRight className="w-4 h-4" />
             </Link>
             <a
               href="#fitur"
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full text-sm font-bold border-2 transition-all hover:bg-white"
               style={{ borderColor: 'var(--border)', color: 'var(--text-mid)' }}
             >
-              Lihat cara kerjanya
+              {t('landing.hero.secondaryCta')}
             </a>
           </div>
 
           {!isAuthenticated && (
             <p className="mt-4 text-xs font-semibold" style={{ color: 'var(--text-soft)' }}>
-              Nggak perlu kartu kredit. Setup sendiri, ± 5 menit.
+              {t('landing.hero.noCreditCard')}
             </p>
           )}
         </div>
@@ -422,14 +364,13 @@ function SectionHeader({ title, desc, align = 'center' }: { title: string; desc?
 }
 
 function PainPoints() {
+  const { t } = useTranslation()
+  const items = t('landing.painPoints.items', { returnObjects: true }) as { before: string; after: string }[]
   return (
     <section className="max-w-4xl mx-auto px-4 lg:px-6 py-16">
-      <SectionHeader
-        title="Kalau ini masih kejadian di klinik kamu..."
-        desc="Mungkin udah waktunya ganti cara kerja. Ini yang biasanya berubah begitu klinik pindah ke PawCare:"
-      />
+      <SectionHeader title={t('landing.painPoints.title')} desc={t('landing.painPoints.desc')} />
       <div className="space-y-3">
-        {PAIN_POINTS.map((p) => (
+        {items.map((p) => (
           <div key={p.before} className="grid sm:grid-cols-2 gap-3">
             <div className="flex items-start gap-2.5 p-3.5 rounded-xl" style={{ background: 'var(--red-lt)' }}>
               <XIcon className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--red)' }} />
@@ -447,16 +388,17 @@ function PainPoints() {
 }
 
 function Flagship() {
+  const { t } = useTranslation()
+  const items = t('landing.flagship.items', { returnObjects: true }) as { tag: string; title: string; desc: string }[]
+  const moreFeatures = t('landing.flagship.moreFeatures', { returnObjects: true }) as string[]
   return (
     <section id="fitur" className="max-w-6xl mx-auto px-4 lg:px-6 py-16">
-      <SectionHeader
-        title="Yang paling sering dipakai klinik"
-        desc="Bukan daftar fitur panjang yang bikin pusing — tiga hal ini yang paling kerasa manfaatnya sehari-hari."
-      />
+      <SectionHeader title={t('landing.flagship.title')} desc={t('landing.flagship.desc')} />
       <div className="space-y-16">
-        {FLAGSHIP.map((f, i) => {
-          const c = ACCENT[f.accent]
-          const Mock = MOCKS[f.mock]
+        {items.map((f, i) => {
+          const meta = FLAGSHIP_META[i]
+          const c = ACCENT[meta.accent]
+          const Mock = MOCKS[meta.mock]
           const reverse = i % 2 === 1
           return (
             <div key={f.title} className={`grid md:grid-cols-2 gap-10 items-center ${reverse ? 'md:[&>*:first-child]:order-2' : ''}`}>
@@ -485,19 +427,22 @@ function Flagship() {
       {/* Compact list of remaining features */}
       <div className="mt-16 pt-10" style={{ borderTop: '1.5px dashed var(--border)' }}>
         <p className="text-center text-sm font-bold mb-5" style={{ color: 'var(--text-mid)' }}>
-          ...dan masih ada beberapa modul lain kalau klinik kamu butuh lebih:
+          {t('landing.flagship.moreLabel')}
         </p>
         <div className="flex flex-wrap justify-center gap-2.5">
-          {MORE_FEATURES.map((f) => (
-            <span
-              key={f.label}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold"
-              style={{ background: 'var(--card)', border: '1.5px solid var(--border)', color: 'var(--text-mid)' }}
-            >
-              <f.icon className="w-3.5 h-3.5" style={{ color: 'var(--orange)' }} />
-              {f.label}
-            </span>
-          ))}
+          {moreFeatures.map((label, i) => {
+            const Icon = MORE_FEATURES_ICON_LIST[i] ?? Star
+            return (
+              <span
+                key={label}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold"
+                style={{ background: 'var(--card)', border: '1.5px solid var(--border)', color: 'var(--text-mid)' }}
+              >
+                <Icon className="w-3.5 h-3.5" style={{ color: 'var(--orange)' }} />
+                {label}
+              </span>
+            )
+          })}
         </div>
       </div>
     </section>
@@ -505,6 +450,7 @@ function Flagship() {
 }
 
 function Story() {
+  const { t } = useTranslation()
   return (
     <section id="cerita" className="py-16" style={{ background: 'var(--card)' }}>
       <div className="max-w-2xl mx-auto px-4 lg:px-6">
@@ -514,10 +460,7 @@ function Story() {
         >
           <span className="text-5xl leading-none" style={{ color: 'var(--orange-lt)' }}>&ldquo;</span>
           <p className="text-base font-semibold leading-relaxed -mt-3" style={{ color: 'var(--text-dark)' }}>
-            Kami bikin PawCare karena sering lihat teman-teman dokter hewan masih sibuk mindahin catatan
-            dari buku ke Excel tiap malam, padahal waktu itu harusnya bisa dipakai istirahat atau buat pasien
-            berikutnya. Jadi kami coba bikin satu tempat yang beresin urusan administrasi klinik, biar yang
-            di depan meja periksa bisa fokus ke hal yang memang butuh mereka: merawat hewannya.
+            {t('landing.story.quote')}
           </p>
           <div className="flex items-center gap-3 mt-6">
             <div
@@ -527,8 +470,8 @@ function Story() {
               🐾
             </div>
             <div>
-              <p className="text-sm font-extrabold" style={{ color: 'var(--text-dark)' }}>Tim PawCare</p>
-              <p className="text-xs font-medium" style={{ color: 'var(--text-soft)' }}>dibangun sambil ngobrol langsung sama klinik-klinik kecil</p>
+              <p className="text-sm font-extrabold" style={{ color: 'var(--text-dark)' }}>{t('landing.story.author')}</p>
+              <p className="text-xs font-medium" style={{ color: 'var(--text-soft)' }}>{t('landing.story.authorNote')}</p>
             </div>
           </div>
         </div>
@@ -538,31 +481,31 @@ function Story() {
 }
 
 function Testimonials() {
+  const { t } = useTranslation()
+  const items = t('landing.testimonials.items', { returnObjects: true }) as { quote: string; name: string; role: string }[]
   return (
     <section className="max-w-6xl mx-auto px-4 lg:px-6 py-16">
-      <SectionHeader
-        title="Kata mereka yang udah pakai"
-        desc="Bukan testimoni template — ini yang beneran mereka bilang."
-      />
+      <SectionHeader title={t('landing.testimonials.title')} desc={t('landing.testimonials.desc')} />
       <div className="grid md:grid-cols-3 gap-5">
-        {TESTIMONIALS.map((t, i) => {
-          const c = ACCENT[t.bg]
+        {items.map((t_, i) => {
+          const meta = TESTIMONIAL_META[i]
+          const c = ACCENT[meta.bg]
           return (
             <div
-              key={t.name}
+              key={t_.name}
               className="card p-5"
               style={{ transform: i === 1 ? 'translateY(-8px)' : 'none' }}
             >
               <p className="text-sm font-semibold leading-relaxed" style={{ color: 'var(--text-dark)' }}>
-                &ldquo;{t.quote}&rdquo;
+                &ldquo;{t_.quote}&rdquo;
               </p>
               <div className="flex items-center gap-2.5 mt-5">
                 <div className="w-9 h-9 rounded-full flex items-center justify-center text-base" style={{ background: c.bg }}>
-                  {t.emoji}
+                  {meta.emoji}
                 </div>
                 <div>
-                  <p className="text-xs font-extrabold" style={{ color: 'var(--text-dark)' }}>{t.name}</p>
-                  <p className="text-[11px] font-medium" style={{ color: 'var(--text-soft)' }}>{t.role}</p>
+                  <p className="text-xs font-extrabold" style={{ color: 'var(--text-dark)' }}>{t_.name}</p>
+                  <p className="text-[11px] font-medium" style={{ color: 'var(--text-soft)' }}>{t_.role}</p>
                 </div>
               </div>
             </div>
@@ -574,12 +517,14 @@ function Testimonials() {
 }
 
 function HowItWorks() {
+  const { t } = useTranslation()
+  const steps = t('landing.howItWorks.steps', { returnObjects: true }) as { title: string; desc: string }[]
   return (
     <section id="cara-kerja" className="py-16" style={{ background: 'var(--card)' }}>
       <div className="max-w-3xl mx-auto px-4 lg:px-6">
-        <SectionHeader title="Mulainya gampang kok" desc="Nggak ada training berhari-hari, nggak ada instalasi ribet." />
+        <SectionHeader title={t('landing.howItWorks.title')} desc={t('landing.howItWorks.desc')} />
         <div className="space-y-5">
-          {STEPS.map((s, i) => (
+          {steps.map((s, i) => (
             <div key={s.title} className="flex gap-4 items-start">
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center font-display font-black text-sm flex-shrink-0"
@@ -587,7 +532,7 @@ function HowItWorks() {
               >
                 {i + 1}
               </div>
-              <div className="flex-1 pb-5" style={{ borderBottom: i < STEPS.length - 1 ? '1.5px dashed var(--border)' : 'none' }}>
+              <div className="flex-1 pb-5" style={{ borderBottom: i < steps.length - 1 ? '1.5px dashed var(--border)' : 'none' }}>
                 <h3 className="font-display font-extrabold text-base" style={{ color: 'var(--text-dark)' }}>{s.title}</h3>
                 <p className="text-sm font-medium mt-1" style={{ color: 'var(--text-soft)' }}>{s.desc}</p>
               </div>
@@ -600,13 +545,15 @@ function HowItWorks() {
 }
 
 function FAQ() {
+  const { t } = useTranslation()
+  const items = t('landing.faq.items', { returnObjects: true }) as { q: string; a: string }[]
   const [openIdx, setOpenIdx] = useState<number | null>(0)
   return (
     <section id="faq" className="py-16">
       <div className="max-w-2xl mx-auto px-4 lg:px-6">
-        <SectionHeader title="Pertanyaan yang biasa muncul" />
+        <SectionHeader title={t('landing.faq.title')} />
         <div className="space-y-2.5">
-          {FAQS.map((f, i) => {
+          {items.map((f, i) => {
             const open = openIdx === i
             return (
               <div key={f.q} className="card-sm overflow-hidden">
@@ -635,6 +582,7 @@ function FAQ() {
 }
 
 function FinalCTA() {
+  const { t } = useTranslation()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   return (
     <section className="max-w-4xl mx-auto px-4 lg:px-6 py-16">
@@ -645,12 +593,10 @@ function FinalCTA() {
         <div className="absolute -right-4 -top-4 text-7xl opacity-10 pointer-events-none select-none">🐾</div>
         <div className="absolute -left-6 -bottom-6 text-7xl opacity-10 pointer-events-none select-none">🐾</div>
         <h2 className="font-display font-black text-2xl lg:text-3xl text-white relative">
-          {isAuthenticated ? 'Balik lagi ke kliniknya, yuk' : 'Yuk, coba dulu. Gratis kok.'}
+          {isAuthenticated ? t('landing.finalCta.titleAuthenticated') : t('landing.finalCta.titleGuest')}
         </h2>
         <p className="mt-3 text-sm font-medium max-w-sm mx-auto relative" style={{ color: 'rgba(255,255,255,.7)' }}>
-          {isAuthenticated
-            ? 'Dashboard kamu nunggu buat dilanjutin.'
-            : 'Nggak butuh komitmen macam-macam. Coba dulu 5 menit, kalau cocok baru lanjut.'}
+          {isAuthenticated ? t('landing.finalCta.descAuthenticated') : t('landing.finalCta.descGuest')}
         </p>
         <div className="mt-7 flex flex-col sm:flex-row gap-3 justify-center relative">
           {isAuthenticated ? (
@@ -659,7 +605,7 @@ function FinalCTA() {
               className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full text-sm font-bold transition-all hover:-translate-y-0.5"
               style={{ background: 'var(--orange)', color: '#fff' }}
             >
-              Buka Dashboard <ArrowRight className="w-4 h-4" />
+              {t('landing.finalCta.ctaAuthenticated')} <ArrowRight className="w-4 h-4" />
             </Link>
           ) : (
             <>
@@ -668,14 +614,14 @@ function FinalCTA() {
                 className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full text-sm font-bold transition-all hover:-translate-y-0.5"
                 style={{ background: 'var(--orange)', color: '#fff' }}
               >
-                Coba Gratis Sekarang <ArrowRight className="w-4 h-4" />
+                {t('landing.finalCta.ctaGuest')} <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 to="/login"
                 className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full text-sm font-bold text-white border-2"
                 style={{ borderColor: 'rgba(255,255,255,.25)' }}
               >
-                Udah punya akun? Masuk
+                {t('landing.finalCta.loginLink')}
               </Link>
             </>
           )}
@@ -686,6 +632,7 @@ function FinalCTA() {
 }
 
 function Footer() {
+  const { t } = useTranslation()
   return (
     <footer style={{ borderTop: '1.5px solid var(--border)' }}>
       <div className="max-w-6xl mx-auto px-4 lg:px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -697,16 +644,16 @@ function Footer() {
             <img src="/logo-icon-white.svg" alt="PawCare" className="w-full h-full" />
           </div>
           <span className="font-display font-black text-sm" style={{ color: 'var(--text-dark)' }}>
-            PawCare Clinic System
+            {t('landing.footer.brand')}
           </span>
         </div>
         <p className="text-xs font-semibold" style={{ color: 'var(--text-soft)' }}>
-          © 2025 PawCare. Dibuat untuk klinik hewan Indonesia.
+          {t('landing.footer.copyright')}
         </p>
         <div className="flex items-center gap-3">
-          <Link to="/booking" className="text-xs font-bold" style={{ color: 'var(--text-mid)' }}>Booking</Link>
-          <Link to="/daftar" className="text-xs font-bold" style={{ color: 'var(--text-mid)' }}>Daftar</Link>
-          <Link to="/login" className="text-xs font-bold" style={{ color: 'var(--text-mid)' }}>Masuk</Link>
+          <Link to="/booking" className="text-xs font-bold" style={{ color: 'var(--text-mid)' }}>{t('landing.footer.booking')}</Link>
+          <Link to="/daftar" className="text-xs font-bold" style={{ color: 'var(--text-mid)' }}>{t('landing.footer.register')}</Link>
+          <Link to="/login" className="text-xs font-bold" style={{ color: 'var(--text-mid)' }}>{t('landing.footer.login')}</Link>
         </div>
       </div>
     </footer>

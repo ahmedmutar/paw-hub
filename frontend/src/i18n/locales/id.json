@@ -1,0 +1,208 @@
+{
+  "common": {
+    "language": "Bahasa"
+  },
+  "login": {
+    "brand": "PawCare",
+    "tagline": "Sistem Manajemen Klinik Hewan",
+    "title": "Masuk ke akun Anda",
+    "username": "Username",
+    "usernamePlaceholder": "Masukkan username",
+    "password": "Password",
+    "passwordPlaceholder": "Masukkan password",
+    "submit": "Masuk",
+    "defaultError": "Terjadi kesalahan. Coba lagi.",
+    "footer": "© 2025 PawCare Clinic System"
+  },
+  "onboarding": {
+    "brand": "VetCore",
+    "tagline": "Daftarkan klinik Anda — gratis 14 hari",
+    "steps": {
+      "clinic": "Info Klinik",
+      "admin": "Akun Admin",
+      "plan": "Pilih Paket",
+      "confirm": "Konfirmasi"
+    },
+    "featureLabels": {
+      "whatsapp": "Notifikasi WhatsApp",
+      "booking": "Booking Online",
+      "grooming": "Modul Grooming",
+      "reminder": "Reminder Otomatis",
+      "portal": "Owner Portal",
+      "priority_support": "Priority Support"
+    },
+    "clinic": {
+      "name": "Nama Klinik",
+      "namePlaceholder": "ex: PawCare Clinic",
+      "slug": "Slug URL",
+      "slugPlaceholder": "pawcare-clinic",
+      "slugChecking": "Memeriksa ketersediaan...",
+      "slugAvailable": "✓ Slug tersedia",
+      "slugTaken": "✗ Slug sudah digunakan",
+      "email": "Email Klinik",
+      "emailPlaceholder": "info@klinikanda.com",
+      "phone": "Nomor Telepon",
+      "phonePlaceholder": "0812xxxxxxxx",
+      "address": "Alamat Klinik",
+      "addressPlaceholder": "Jl. ..."
+    },
+    "admin": {
+      "name": "Nama Lengkap Admin",
+      "namePlaceholder": "Nama Anda",
+      "username": "Username",
+      "usernamePlaceholder": "username_anda",
+      "password": "Password",
+      "passwordPlaceholder": "Min. 8 karakter",
+      "email": "Email Admin",
+      "emailPlaceholder": "admin@email.com",
+      "phone": "Nomor HP Admin",
+      "phonePlaceholder": "0812xxxxxxxx"
+    },
+    "plan": {
+      "monthly": "Bulanan",
+      "yearly": "Tahunan",
+      "yearlySave": "(hemat ~17%)",
+      "free": "Gratis",
+      "perYear": "/tahun",
+      "perMonth": "/bulan",
+      "branchesUnlimited": "Cabang unlimited",
+      "branches": "{{count}} cabang",
+      "usersUnlimited": "User unlimited",
+      "users": "{{count}} user",
+      "patientsUnlimited": "Pasien unlimited",
+      "patients": "{{count}} pasien",
+      "trialNote": "Semua paket dimulai dengan <bold>14 hari trial gratis</bold>. Tidak perlu kartu kredit."
+    },
+    "confirm": {
+      "clinicInfo": "Info Klinik",
+      "name": "Nama",
+      "slug": "Slug",
+      "email": "Email",
+      "phone": "Telepon",
+      "adminAccount": "Akun Admin",
+      "username": "Username",
+      "planChosen": "Paket Dipilih",
+      "plan": "Paket",
+      "cycle": "Siklus",
+      "cycleMonthly": "Bulanan",
+      "cycleYearly": "Tahunan",
+      "price": "Harga",
+      "trial": "Trial",
+      "trialValue": "14 hari gratis",
+      "terms": "Dengan mendaftar, Anda menyetujui Syarat & Ketentuan VetCore."
+    },
+    "nav": {
+      "back": "Kembali",
+      "next": "Lanjut",
+      "submit": "Daftarkan Klinik",
+      "submitting": "Mendaftarkan...",
+      "haveAccount": "Sudah punya akun?"
+    },
+    "errors": {
+      "clinicName": "Nama klinik wajib diisi",
+      "clinicSlug": "Slug wajib diisi",
+      "clinicEmail": "Email wajib diisi",
+      "adminName": "Nama admin wajib diisi",
+      "adminUsername": "Username wajib diisi",
+      "adminPassword": "Password minimal 8 karakter",
+      "generic": "Terjadi kesalahan. Coba lagi."
+    },
+    "footer": "VetCore © {{year}} · Sistem Manajemen Klinik Hewan"
+  },
+  "landing": {
+    "nav": {
+      "features": "Fitur",
+      "story": "Cerita Kami",
+      "howItWorks": "Cara Kerja",
+      "faq": "FAQ",
+      "login": "Masuk",
+      "tryFree": "Coba Gratis",
+      "dashboard": "Buka Dashboard"
+    },
+    "hero": {
+      "greeting": "🐾 Halo, dokter hewan & owner klinik!",
+      "titlePrefix": "Capek urus klinik pakai",
+      "titleHighlight": "buku & Excel?",
+      "desc": "PawCare ngumpulin rekam medis, antrian, kasir, gudang, sampai laporan bisnis klinik hewan kamu jadi satu tempat — biar waktu kamu lebih banyak buat pasien, bukan admin.",
+      "ctaAuthenticated": "Buka Dashboard",
+      "ctaGuest": "Coba Sekarang, Gratis",
+      "secondaryCta": "Lihat cara kerjanya",
+      "noCreditCard": "Nggak perlu kartu kredit. Setup sendiri, ± 5 menit."
+    },
+    "painPoints": {
+      "title": "Kalau ini masih kejadian di klinik kamu...",
+      "desc": "Mungkin udah waktunya ganti cara kerja. Ini yang biasanya berubah begitu klinik pindah ke PawCare:",
+      "items": [
+        { "before": "Catatan pasien masih di buku, dicari 10 menit tiap kali dibutuhin", "after": "Tinggal ketik nama atau ID, rekam medis langsung muncul" },
+        { "before": "Reminder vaksin sering kelewat, pasien jadi telat kontrol", "after": "WhatsApp reminder jalan sendiri, nggak perlu diingat manual" },
+        { "before": "Stok obat tau-tau habis pas lagi ramai-ramainya", "after": "Ada notifikasi begitu stok mulai menipis" },
+        { "before": "Rekap kas & laporan bulanan bisa makan waktu semalaman", "after": "Tinggal buka dashboard, semua angka udah kehitung" },
+        { "before": "Telepon masuk terus buat booking, resepsionis kewalahan", "after": "Pemilik hewan booking sendiri dari HP-nya" }
+      ]
+    },
+    "flagship": {
+      "title": "Yang paling sering dipakai klinik",
+      "desc": "Bukan daftar fitur panjang yang bikin pusing — tiga hal ini yang paling kerasa manfaatnya sehari-hari.",
+      "items": [
+        { "tag": "Rekam Medis", "title": "Riwayat pasien, nggak pernah hilang lagi", "desc": "Setiap kunjungan, diagnosa, dan resep otomatis tersimpan di profil masing-masing hewan. Dokter pengganti pun bisa langsung paham riwayatnya tanpa nanya-nanya pemilik dari awal." },
+        { "tag": "Booking & WhatsApp", "title": "Biar pemilik hewan yang atur jadwalnya sendiri", "desc": "Link booking bisa disebar ke Instagram atau WA klinik. Begitu dijadwalkan, reminder otomatis terkirim H-1 — jadi jadwal kosong dan pasien lupa datang berkurang banyak." },
+        { "tag": "Laporan Bisnis", "title": "Tau kondisi klinik tanpa harus hitung manual", "desc": "Omzet harian, tren kunjungan, sampai layanan paling laku — semua kebaca dari satu layar. Nggak perlu lagi buka Excel di akhir bulan." }
+      ],
+      "moreLabel": "...dan masih ada beberapa modul lain kalau klinik kamu butuh lebih:",
+      "moreFeatures": [
+        "Rawat Inap & Pet Hotel", "Grooming & Pet Shop", "Gudang & Inventori", "Telemedicine",
+        "Manajemen Lab", "Loyalty & Ulasan", "Multi-Cabang", "Kasir & Billing",
+        "Antrian Real-time", "Business Intelligence"
+      ]
+    },
+    "story": {
+      "quote": "Kami bikin PawCare karena sering lihat teman-teman dokter hewan masih sibuk mindahin catatan dari buku ke Excel tiap malam, padahal waktu itu harusnya bisa dipakai istirahat atau buat pasien berikutnya. Jadi kami coba bikin satu tempat yang beresin urusan administrasi klinik, biar yang di depan meja periksa bisa fokus ke hal yang memang butuh mereka: merawat hewannya.",
+      "author": "Tim PawCare",
+      "authorNote": "dibangun sambil ngobrol langsung sama klinik-klinik kecil"
+    },
+    "testimonials": {
+      "title": "Kata mereka yang udah pakai",
+      "desc": "Bukan testimoni template — ini yang beneran mereka bilang.",
+      "items": [
+        { "quote": "Dulu tiap tutup kasir saya harus hitung manual pemasukan hari itu, kadang sampai jam 9 malam. Sekarang tinggal buka dashboard, angkanya udah rapi semua.", "name": "drg. Sarah Amelia", "role": "Klinik Meong Sehat, Bandung" },
+        { "quote": "Yang paling kerasa itu reminder WA otomatis. Pasien yang biasanya telat vaksin ulang jadi jauh lebih jarang kelewat sekarang.", "name": "Hendra Wijaya", "role": "Owner, Pet Care 24 Surabaya" },
+        { "quote": "Booking online-nya bikin telepon masuk berkurang drastis. Tim resepsionis jadi bisa lebih fokus melayani yang datang langsung.", "name": "drg. Rizky Pratama", "role": "Praktik Mandiri, Jakarta" }
+      ]
+    },
+    "howItWorks": {
+      "title": "Mulainya gampang kok",
+      "desc": "Nggak ada training berhari-hari, nggak ada instalasi ribet.",
+      "steps": [
+        { "title": "Daftar klinik", "desc": "Isi nama klinik dan buat akun admin. Nggak sampai 5 menit." },
+        { "title": "Atur layanan", "desc": "Tambahin cabang, layanan, produk, dan tim sesuai klinik kamu." },
+        { "title": "Mulai jalan", "desc": "Terima pasien pertama, sisanya biar sistem yang bantu ingat." }
+      ]
+    },
+    "faq": {
+      "title": "Pertanyaan yang biasa muncul",
+      "items": [
+        { "q": "Emang bisa coba gratis dulu?", "a": "Bisa banget. Daftar dan coba fitur-fitur utamanya dulu, nggak perlu masukin kartu kredit di awal." },
+        { "q": "Data klinik saya aman nggak?", "a": "Aman. Data tiap klinik terpisah penuh dari klinik lain, dan ada backup otomatis tiap hari." },
+        { "q": "Klinik saya ada 3 cabang, bisa?", "a": "Bisa. Semua cabang bisa dipantau dari satu akun, laporannya bisa dilihat gabungan atau per cabang." },
+        { "q": "Perlu install aplikasi khusus?", "a": "Nggak perlu. Tinggal buka browser di laptop atau HP, langsung bisa dipakai." },
+        { "q": "Kalau tiba-tiba bingung pas pakai, gimana?", "a": "Tinggal chat tim support kami di WhatsApp, biasanya dibalas cepat." }
+      ]
+    },
+    "finalCta": {
+      "titleAuthenticated": "Balik lagi ke kliniknya, yuk",
+      "titleGuest": "Yuk, coba dulu. Gratis kok.",
+      "descAuthenticated": "Dashboard kamu nunggu buat dilanjutin.",
+      "descGuest": "Nggak butuh komitmen macam-macam. Coba dulu 5 menit, kalau cocok baru lanjut.",
+      "ctaAuthenticated": "Buka Dashboard",
+      "ctaGuest": "Coba Gratis Sekarang",
+      "loginLink": "Udah punya akun? Masuk"
+    },
+    "footer": {
+      "brand": "PawCare Clinic System",
+      "copyright": "© 2025 PawCare. Dibuat untuk klinik hewan Indonesia.",
+      "booking": "Booking",
+      "register": "Daftar",
+      "login": "Masuk"
+    }
+  }
+}

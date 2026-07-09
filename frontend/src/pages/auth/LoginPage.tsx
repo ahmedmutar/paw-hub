@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { api } from '@/lib/api'
 import { Button, Input } from '@/components/ui'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 
 export default function LoginPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const login = useAuthStore((s) => s.login)
   const [form, setForm] = useState({ username: '', password: '' })
@@ -23,7 +26,7 @@ export default function LoginPage() {
       login({ ...user, accessToken, refreshToken })
       navigate('/dashboard')
     } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Terjadi kesalahan. Coba lagi.')
+      setError(err.response?.data?.message ?? t('login.defaultError'))
     } finally {
       setLoading(false)
     }
@@ -46,6 +49,10 @@ export default function LoginPage() {
         />
       </div>
 
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
+
       <div className="w-full max-w-sm relative">
         {/* Logo */}
         <div className="flex flex-col items-center mb-7">
@@ -56,17 +63,17 @@ export default function LoginPage() {
             <img src="/logo-icon-white.svg" alt="PawCare" className="w-full h-full" />
           </div>
           <h1 className="font-display font-black text-2xl" style={{ color: 'var(--text-dark)' }}>
-            PawCare
+            {t('login.brand')}
           </h1>
           <p className="text-sm font-medium mt-1" style={{ color: 'var(--text-soft)' }}>
-            Sistem Manajemen Klinik Hewan
+            {t('login.tagline')}
           </p>
         </div>
 
         {/* Card */}
         <div className="card p-6 shadow-card-md">
           <h2 className="font-display font-extrabold text-base mb-5" style={{ color: 'var(--text-dark)' }}>
-            Masuk ke akun Anda
+            {t('login.title')}
           </h2>
 
           {error && (
@@ -81,8 +88,8 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
-              label="Username"
-              placeholder="Masukkan username"
+              label={t('login.username')}
+              placeholder={t('login.usernamePlaceholder')}
               value={form.username}
               onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))}
               required
@@ -92,12 +99,12 @@ export default function LoginPage() {
 
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold" style={{ color: 'var(--text-mid)' }}>
-                Password <span className="text-red-500">*</span>
+                {t('login.password')} <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
                   type={showPass ? 'text' : 'password'}
-                  placeholder="Masukkan password"
+                  placeholder={t('login.passwordPlaceholder')}
                   value={form.password}
                   onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
                   required
@@ -116,13 +123,13 @@ export default function LoginPage() {
             </div>
 
             <Button type="submit" className="w-full mt-2" size="lg" loading={loading}>
-              Masuk
+              {t('login.submit')}
             </Button>
           </form>
         </div>
 
         <p className="text-center text-xs font-medium mt-5" style={{ color: 'var(--text-soft)' }}>
-          © 2025 PawCare Clinic System
+          {t('login.footer')}
         </p>
       </div>
     </div>
