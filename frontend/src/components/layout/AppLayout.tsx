@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom'
 import {
-  LayoutDashboard, Users, ClipboardList, UserCheck,
+  LayoutDashboard, Users, ClipboardList,
   CreditCard, Building2, Package,
   Wrench, BarChart3, DollarSign, Receipt, ShoppingBag, BedDouble, MessageSquare, CalendarDays, Bell, Scissors, Globe, Zap, Shield, Star, QrCode,
   Video, FlaskConical, Activity, Pill, FileText, BarChart2, ShoppingCart, Link2,
@@ -26,7 +26,6 @@ const navItems: NavItem[] = [
   { label: 'Manajemen User',      icon: Users,            path: '/user',               roles: ['admin'] },
   { label: 'Data Pasien',         icon: PawPrint,         path: '/pasien' },
   { label: 'Pendaftaran Berobat', icon: ClipboardList,    path: '/pendaftaran' },
-  { label: 'Penerimaan Pasien',   icon: UserCheck,        path: '/pendaftaran',        roles: ['admin', 'dokter', 'resepsionis'] },
   { label: 'Pembayaran',          icon: CreditCard,       path: '/pembayaran',         roles: ['admin', 'kasir', 'resepsionis'] },
   { label: 'Layanan & Jasa',      icon: Wrench,           path: '/layanan',            roles: ['admin'] },
   { label: 'Gudang & Inventori',  icon: Package,          path: '/gudang',             roles: ['admin'] },
@@ -213,7 +212,7 @@ export default function AppLayout() {
 
   const pathLabel: Record<string, string> = {
     '/dashboard': 'Dashboard', '/pasien': 'Data Pasien',
-    '/pendaftaran': 'Pendaftaran Berobat', '/penerimaan': 'Penerimaan Pasien',
+    '/pendaftaran': 'Pendaftaran Berobat',
     '/pemeriksaan': 'Hasil Pemeriksaan', '/pembayaran': 'Pembayaran',
     '/penggajian': 'Penggajian', '/pengeluaran': 'Pengeluaran', '/rawat-inap': 'Rawat Inap',
     '/notifikasi': 'Notifikasi WhatsApp', '/appointment': 'Booking & Appointment', '/reminder': 'Reminder & Alert',
