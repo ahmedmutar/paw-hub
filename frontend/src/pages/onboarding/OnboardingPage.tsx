@@ -165,11 +165,11 @@ function StepPlan({ form, setForm, plans }: any) {
   return (
     <div className="space-y-4">
       {/* Cycle toggle */}
-      <div className="flex items-center justify-center gap-3">
+      <div className="flex items-center justify-center gap-3 flex-wrap">
         <span className={`text-sm ${form.cycle === 'monthly' ? 'font-semibold text-gray-800' : 'text-gray-400'}`}>{t('onboarding.plan.monthly')}</span>
-        <button onClick={() => setForm((f: any) => ({ ...f, cycle: f.cycle === 'monthly' ? 'yearly' : 'monthly' }))}
-          className={`relative w-12 h-6 rounded-full transition-colors ${form.cycle === 'yearly' ? 'bg-primary-500' : 'bg-gray-300'}`}>
-          <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.cycle === 'yearly' ? 'translate-x-6' : 'translate-x-0.5'}`} />
+        <button type="button" onClick={() => setForm((f: any) => ({ ...f, cycle: f.cycle === 'monthly' ? 'yearly' : 'monthly' }))}
+          className={`relative shrink-0 w-12 h-6 rounded-full transition-colors ${form.cycle === 'yearly' ? 'bg-primary-500' : 'bg-gray-300'}`}>
+          <span className={`absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.cycle === 'yearly' ? 'translate-x-6' : 'translate-x-0'}`} />
         </button>
         <span className={`text-sm ${form.cycle === 'yearly' ? 'font-semibold text-gray-800' : 'text-gray-400'}`}>
           {t('onboarding.plan.yearly')} <span className="text-green-600 font-medium">{t('onboarding.plan.yearlySave')}</span>
@@ -400,13 +400,6 @@ export default function OnboardingPage() {
 
         <p className="text-center text-xs text-gray-400 mt-4">{t('onboarding.footer', { year: new Date().getFullYear() })}</p>
       </div>
-
-      {/* Utility classes via tailwind (inline for readability) */}
-      <style>{`
-        .input { @apply w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500; }
-        .label { @apply block text-sm font-medium text-gray-700 mb-1; }
-        .err   { @apply text-xs text-red-500 mt-1; }
-      `}</style>
     </div>
   )
 }

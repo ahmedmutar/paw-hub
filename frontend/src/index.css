@@ -147,4 +147,15 @@
     transform: translateY(-3px);
     box-shadow: 0 8px 40px rgba(45,27,14,.13);
   }
+
+  /* ── Onboarding form fields ─────────────────────────── */
+  .input {
+    @apply w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500;
+  }
+  .label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+  .err {
+    @apply text-xs text-red-500 mt-1;
+  }
 }
