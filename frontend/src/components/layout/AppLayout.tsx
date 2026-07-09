@@ -1,10 +1,8 @@
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate, Link } from 'react-router-dom'
 import {
-  LayoutDashboard, Users, ClipboardList,
-  CreditCard, Building2, Package,
-  Wrench, BarChart3, DollarSign, Receipt, ShoppingBag, BedDouble, MessageSquare, CalendarDays, Bell, Scissors, Globe, Zap, Shield, Star, QrCode,
-  Video, FlaskConical, Activity, Pill, FileText, BarChart2, ShoppingCart, Link2,
+  LayoutDashboard, ClipboardList, CreditCard, Building2, Package,
+  BarChart3, DollarSign, MessageSquare, CalendarDays, Activity,
   ChevronDown, LogOut, Menu, X, PawPrint,
 } from 'lucide-react'
 import PwaInstallBanner from '@/components/PwaInstallBanner'
@@ -16,51 +14,81 @@ interface NavItem {
   label: string
   icon: React.ElementType
   path?: string
-  children?: { label: string; path: string }[]
+  children?: { label: string; path: string; roles?: string[] }[]
   roles?: string[]
 }
 
 const navItems: NavItem[] = [
   { label: 'Dashboard',           icon: LayoutDashboard, path: '/dashboard' },
-  { label: 'Cabang',              icon: Building2,        path: '/cabang',             roles: ['admin'] },
-  { label: 'Manajemen User',      icon: Users,            path: '/user',               roles: ['admin'] },
   { label: 'Data Pasien',         icon: PawPrint,         path: '/pasien' },
   { label: 'Pendaftaran Berobat', icon: ClipboardList,    path: '/pendaftaran' },
-  { label: 'Pembayaran',          icon: CreditCard,       path: '/pembayaran',         roles: ['admin', 'kasir', 'resepsionis'] },
-  { label: 'Layanan & Jasa',      icon: Wrench,           path: '/layanan',            roles: ['admin'] },
-  { label: 'Gudang & Inventori',  icon: Package,          path: '/gudang',             roles: ['admin'] },
-  { label: 'Pet Shop',            icon: ShoppingBag,      path: '/petshop',            roles: ['admin', 'kasir'] },
-  { label: 'Rawat Inap',          icon: BedDouble,        path: '/rawat-inap',         roles: ['admin', 'dokter', 'resepsionis'] },
-  { label: 'Booking Online',      icon: CalendarDays,     path: '/appointment',        roles: ['admin', 'resepsionis'] },
-  { label: 'Reminder & Alert',    icon: Bell,             path: '/reminder',           roles: ['admin'] },
-  { label: 'Notifikasi WA',       icon: MessageSquare,    path: '/notifikasi',         roles: ['admin'] },
-  { label: 'Grooming',            icon: Scissors,         path: '/grooming',           roles: ['admin', 'karyawan', 'resepsionis', 'kasir'] },
-  { label: 'Billing & Langganan', icon: Zap,              path: '/billing',            roles: ['admin'] },
-  { label: 'Platform Tenants',    icon: Globe,            path: '/superadmin/tenants', roles: ['superadmin'] },
-  { label: 'Audit Trail',         icon: Shield,           path: '/audit',              roles: ['admin', 'superadmin'] },
-  { label: 'Broadcast WA',        icon: MessageSquare,    path: '/broadcast',          roles: ['admin'] },
-  { label: 'Loyalty Program',     icon: Star,             path: '/loyalty',            roles: ['admin'] },
-  { label: 'Rating & Ulasan',     icon: Star,             path: '/review',             roles: ['admin'] },
-  { label: 'Jadwal Dokter',       icon: CalendarDays,     path: '/jadwal-dokter',      roles: ['admin'] },
-  { label: 'Scanner Barcode',     icon: QrCode,           path: '/gudang/barcode',     roles: ['admin'] },
-  { label: 'Penggajian',          icon: DollarSign,       path: '/penggajian',         roles: ['admin'] },
-  { label: 'Pengeluaran',         icon: Receipt,          path: '/pengeluaran',        roles: ['admin'] },
-  { label: 'Pet Hotel',           icon: BedDouble,        path: '/pet-hotel',          roles: ['admin', 'karyawan'] },
-  { label: 'Telemedicine',        icon: Video,            path: '/telemed',            roles: ['admin', 'dokter'] },
-  { label: 'Manajemen Lab',       icon: FlaskConical,     path: '/lab',                roles: ['admin', 'dokter'] },
-  { label: 'Symptom Checker',     icon: Activity,         path: '/symptom',            roles: ['admin'] },
-  { label: 'Drug & Dosis',        icon: Pill,             path: '/clinical/drug',      roles: ['admin', 'dokter'] },
-  { label: 'Laporan PPh 21',      icon: FileText,         path: '/pajak',              roles: ['admin'] },
-  { label: 'Google Calendar',     icon: Link2,            path: '/calendar-sync',      roles: ['admin', 'dokter'] },
-  { label: 'Business Intelligence', icon: BarChart2,      path: '/analytics/bi',       roles: ['admin'] },
-  { label: 'Marketplace',         icon: ShoppingCart,     path: '/marketplace',        roles: ['admin'] },
+  { label: 'Pembayaran',          icon: CreditCard,       path: '/pembayaran', roles: ['admin', 'kasir', 'resepsionis'] },
   {
-    label: 'Laporan', icon: BarChart3, roles: ['admin'],
+    label: 'Layanan Klinis', icon: Activity,
     children: [
-      { label: 'Harian',   path: '/laporan/harian' },
-      { label: 'Mingguan', path: '/laporan/mingguan' },
-      { label: 'Bulanan',  path: '/laporan/bulanan' },
-      { label: 'Rekap',    path: '/laporan/rekap' },
+      { label: 'Rawat Inap',      path: '/rawat-inap',    roles: ['admin', 'dokter', 'resepsionis'] },
+      { label: 'Pet Hotel',       path: '/pet-hotel',     roles: ['admin', 'karyawan'] },
+      { label: 'Grooming',        path: '/grooming',      roles: ['admin', 'karyawan', 'resepsionis', 'kasir'] },
+      { label: 'Telemedicine',    path: '/telemed',       roles: ['admin', 'dokter'] },
+      { label: 'Manajemen Lab',   path: '/lab',           roles: ['admin', 'dokter'] },
+      { label: 'Symptom Checker', path: '/symptom',       roles: ['admin'] },
+      { label: 'Drug & Dosis',    path: '/clinical/drug', roles: ['admin', 'dokter'] },
+    ],
+  },
+  {
+    label: 'Booking & Jadwal', icon: CalendarDays,
+    children: [
+      { label: 'Booking Online',   path: '/appointment',   roles: ['admin', 'resepsionis'] },
+      { label: 'Jadwal Dokter',    path: '/jadwal-dokter', roles: ['admin'] },
+      { label: 'Reminder & Alert', path: '/reminder',      roles: ['admin'] },
+      { label: 'Google Calendar',  path: '/calendar-sync', roles: ['admin', 'dokter'] },
+    ],
+  },
+  {
+    label: 'Gudang & Produk', icon: Package,
+    children: [
+      { label: 'Gudang & Inventori', path: '/gudang',         roles: ['admin'] },
+      { label: 'Scanner Barcode',    path: '/gudang/barcode', roles: ['admin'] },
+      { label: 'Pet Shop',           path: '/petshop',        roles: ['admin', 'kasir'] },
+      { label: 'Marketplace',        path: '/marketplace',    roles: ['admin'] },
+    ],
+  },
+  {
+    label: 'Keuangan', icon: DollarSign,
+    children: [
+      { label: 'Pengeluaran',         path: '/pengeluaran', roles: ['admin'] },
+      { label: 'Penggajian',          path: '/penggajian',  roles: ['admin'] },
+      { label: 'Billing & Langganan', path: '/billing',     roles: ['admin'] },
+      { label: 'Laporan PPh 21',      path: '/pajak',       roles: ['admin'] },
+    ],
+  },
+  {
+    label: 'Laporan & Analitik', icon: BarChart3,
+    children: [
+      { label: 'Harian',   path: '/laporan/harian',  roles: ['admin'] },
+      { label: 'Mingguan', path: '/laporan/mingguan', roles: ['admin'] },
+      { label: 'Bulanan',  path: '/laporan/bulanan',  roles: ['admin'] },
+      { label: 'Rekap',    path: '/laporan/rekap',    roles: ['admin'] },
+      { label: 'Business Intelligence', path: '/analytics/bi', roles: ['admin'] },
+      { label: 'Audit Trail',           path: '/audit',        roles: ['admin', 'superadmin'] },
+    ],
+  },
+  {
+    label: 'Marketing & CRM', icon: MessageSquare,
+    children: [
+      { label: 'Notifikasi WA',   path: '/notifikasi', roles: ['admin'] },
+      { label: 'Broadcast WA',    path: '/broadcast',  roles: ['admin'] },
+      { label: 'Loyalty Program', path: '/loyalty',    roles: ['admin'] },
+      { label: 'Rating & Ulasan', path: '/review',     roles: ['admin'] },
+    ],
+  },
+  {
+    label: 'Administrasi', icon: Building2,
+    children: [
+      { label: 'Cabang',           path: '/cabang',  roles: ['admin'] },
+      { label: 'Manajemen User',   path: '/user',    roles: ['admin'] },
+      { label: 'Layanan & Jasa',   path: '/layanan', roles: ['admin'] },
+      { label: 'Platform Tenants', path: '/superadmin/tenants', roles: ['superadmin'] },
     ],
   },
 ]
@@ -92,8 +120,9 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   const isActive = (path: string) => location.pathname === path
   const isGroupActive = (children: { path: string }[]) =>
     children.some((c) => location.pathname.startsWith(c.path))
-  const canView = (item: NavItem) =>
-    !item.roles || (user?.role && item.roles.includes(user.role))
+  const hasRole = (roles?: string[]) =>
+    !roles || (user?.role && roles.includes(user.role))
+  const canView = (item: NavItem) => hasRole(item.roles)
 
   const handleLogout = async () => {
     try { await api.post('/keluar') } catch {}
@@ -146,12 +175,15 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
           if (!canView(item)) return null
 
           if (item.children) {
-            const open = expanded.includes(item.label) || isGroupActive(item.children)
+            const visibleChildren = item.children.filter((c) => hasRole(c.roles))
+            if (visibleChildren.length === 0) return null
+
+            const open = expanded.includes(item.label) || isGroupActive(visibleChildren)
             return (
               <div key={item.label}>
                 <button
                   onClick={() => toggle(item.label)}
-                  className={cn('nav-item justify-between', isGroupActive(item.children) && 'active')}
+                  className={cn('nav-item justify-between', isGroupActive(visibleChildren) && 'active')}
                 >
                   <span className="flex items-center gap-3">
                     <item.icon className="w-4 h-4 shrink-0" />
@@ -161,7 +193,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
                 </button>
                 {open && (
                   <div className="ml-4 mt-0.5 pl-3 space-y-0.5" style={{ borderLeft: '2px solid var(--border)' }}>
-                    {item.children.map((child) => (
+                    {visibleChildren.map((child) => (
                       <button
                         key={child.path}
                         onClick={() => { navigate(child.path); onClose?.() }}
