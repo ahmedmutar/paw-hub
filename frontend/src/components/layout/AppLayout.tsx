@@ -189,21 +189,30 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
                     <item.icon className="w-4 h-4 shrink-0" />
                     {item.label}
                   </span>
-                  <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', open && 'rotate-180')} />
+                  <ChevronDown className={cn('w-3.5 h-3.5 transition-transform duration-300 ease-in-out', open && 'rotate-180')} />
                 </button>
-                {open && (
-                  <div className="ml-4 mt-0.5 pl-3 space-y-0.5" style={{ borderLeft: '2px solid var(--border)' }}>
-                    {visibleChildren.map((child) => (
-                      <button
-                        key={child.path}
-                        onClick={() => { navigate(child.path); onClose?.() }}
-                        className={cn('nav-item text-xs py-2', isActive(child.path) && 'active')}
-                      >
-                        {child.label}
-                      </button>
-                    ))}
+                <div
+                  className="grid"
+                  style={{
+                    gridTemplateRows: open ? '1fr' : '0fr',
+                    opacity: open ? 1 : 0,
+                    transition: 'grid-template-rows 280ms ease-in-out, opacity 220ms ease-in-out',
+                  }}
+                >
+                  <div className="overflow-hidden">
+                    <div className="ml-4 mt-0.5 pl-3 space-y-0.5" style={{ borderLeft: '2px solid var(--border)' }}>
+                      {visibleChildren.map((child) => (
+                        <button
+                          key={child.path}
+                          onClick={() => { navigate(child.path); onClose?.() }}
+                          className={cn('nav-item text-xs py-2', isActive(child.path) && 'active')}
+                        >
+                          {child.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             )
           }
