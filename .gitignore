@@ -35,3 +35,5 @@ npm-debug.*
 
 # typescript
 *.tsbuildinfo
+.vercel
+.env*
