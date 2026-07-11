@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { authenticate, requireRole } from '../../middleware/auth'
 import { runReminderScan } from './reminder.service'
+import { checkPlanFeature } from '../../lib/planLimits'
 
 // VaccinationRecord/DewormingRecord/ReminderLog tidak punya branchId
 // langsung — cuma lewat relasi patientId -> patient.branchId. Admin dikunci
@@ -189,6 +190,9 @@ export async function reminderRoutes(app: FastifyInstance) {
 
   // ── POST /reminder/run — jalankan scan manual (admin) ────────────────────
   app.post('/reminder/run', { preHandler: [authenticate, requireRole('admin')] }, async (req, reply) => {
+    const featureCheck = await checkPlanFeature(app, req.authUser.tenantId, 'reminder')
+    if (!featureCheck.ok) return reply.status(402).send({ message: featureCheck.message })
+
     const { days = 7 } = req.body as any
 
     // Jalankan non-blocking, kembalikan response segera
@@ -204,6 +208,9 @@ export async function reminderRoutes(app: FastifyInstance) {
   app.post('/reminder/send-manual/:type/:recordId', {
     preHandler: [authenticate, requireRole('admin')],
   }, async (req, reply) => {
+    const featureCheck = await checkPlanFeature(app, req.authUser.tenantId, 'reminder')
+    if (!featureCheck.ok) return reply.status(402).send({ message: featureCheck.message })
+
     const { type, recordId } = req.params as any
 
     if (!['vaccination', 'deworming'].includes(type)) {

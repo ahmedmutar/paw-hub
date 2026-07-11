@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { authenticate, requireRole } from '../../middleware/auth'
 import { sendWhatsapp } from '../notif/wa.service'
 import { createStaffNotification } from '../../lib/notification'
+import { checkPlanFeature } from '../../lib/planLimits'
 import { AppointmentStatus } from '@prisma/client'
 
 const APPT_INCLUDE = {
@@ -87,6 +88,10 @@ export async function appointmentRoutes(app: FastifyInstance) {
     }
 
     const d = body.data
+
+    const branchForFeature = await app.prisma.branch.findUnique({ where: { id: BigInt(d.branchId) }, select: { tenantId: true } })
+    const featureCheck = await checkPlanFeature(app, branchForFeature?.tenantId ?? null, 'booking')
+    if (!featureCheck.ok) return reply.status(402).send({ message: featureCheck.message })
 
     // Cek slot tidak double-book untuk dokter yang sama
     const existing = await app.prisma.appointment.findFirst({

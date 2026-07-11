@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { authenticate, requireRole, tenantFilter } from '../../middleware/auth'
+import { checkPlanLimit } from '../../lib/planLimits'
 
 const createSchema = z.object({
   username:      z.string().min(3, 'Min 3 karakter'),
@@ -108,6 +109,9 @@ export async function userRoutes(app: FastifyInstance) {
     const existing = await app.prisma.user.findFirst({ where: { username: body.data.username } })
     if (existing) return reply.status(400).send({ message: 'Username sudah digunakan.' })
 
+    const limitCheck = await checkPlanLimit(app, req.authUser.tenantId, 'users')
+    if (!limitCheck.ok) return reply.status(402).send({ message: limitCheck.message })
+
     const branchId = BigInt(body.data.branchId)
     const userCount = await app.prisma.user.count({ where: { branchId } })
     const branch = await app.prisma.branch.findUnique({ where: { id: branchId } })
@@ -118,6 +122,7 @@ export async function userRoutes(app: FastifyInstance) {
       data: {
         ...rest,
         branchId,
+        tenantId:    req.authUser.tenantId ?? undefined,
         staffingNumber,
         email:       rest.email      || undefined,
         birthdate:   rest.birthdate  ? new Date(rest.birthdate) : undefined,

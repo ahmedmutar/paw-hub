@@ -145,6 +145,27 @@ describe('grooming.routes — isolasi antar-cabang & antar-tenant (IDOR)', () =>
     await app.close()
   })
 
+  describe('POST /grooming/sesi — fitur grooming harus sesuai paket klinik', () => {
+    const OWN_PACKAGE = { id: BigInt(1), branchId: BigInt(1), tenantId: BigInt(1), isDeleted: false, isActive: true, price: 100000 }
+
+    it('ditolak 402 kalau paket klinik tidak punya fitur grooming', async () => {
+      const { groomingRoutes } = await import('../../modules/grooming/grooming.routes')
+      const createMock = vi.fn()
+      const prisma = fullMockPrisma({
+        groomingPackage: { findFirst: vi.fn().mockResolvedValue(OWN_PACKAGE) },
+        groomingSession: { create: createMock },
+        tenantSubscription: {
+          findUnique: vi.fn().mockResolvedValue({ plan: { name: 'Free', features: { grooming: false } } }),
+        },
+      })
+      const app = await buildApp(groomingRoutes, prisma, ADMIN_USER)
+      const res = await app.inject({ method: 'POST', url: '/api/grooming/sesi', payload: { patientId: 1, groomerId: 2, packageId: 1 } })
+      expect(res.statusCode).toBe(402)
+      expect(createMock).not.toHaveBeenCalled()
+      await app.close()
+    })
+  })
+
   it('GET /grooming/stats untuk admin harus tetap discope ke tenant, bukan where kosong', async () => {
     const { groomingRoutes } = await import('../../modules/grooming/grooming.routes')
     const countMock = vi.fn().mockResolvedValue(0)

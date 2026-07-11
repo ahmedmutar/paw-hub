@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { authenticate } from '../../middleware/auth'
+import { checkPlanLimit } from '../../lib/planLimits'
 
 const patientSchema = z.object({
   petCategory:  z.string().min(1, 'Jenis hewan wajib diisi'),
@@ -162,6 +163,9 @@ export async function pasienRoutes(app: FastifyInstance) {
     if (!body.success) {
       return reply.status(400).send({ message: 'Input tidak valid.', errors: body.error.flatten().fieldErrors })
     }
+
+    const limitCheck = await checkPlanLimit(app, req.authUser.tenantId, 'patients')
+    if (!limitCheck.ok) return reply.status(402).send({ message: limitCheck.message })
 
     const branchId = req.authUser.branchId
     let ownerId: bigint

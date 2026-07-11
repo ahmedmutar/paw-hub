@@ -192,4 +192,57 @@ describe('appointment.routes — isolasi antar-cabang & antar-tenant (IDOR)', ()
     expect(hasTenantScope).toBe(true)
     await app.close()
   })
+
+  describe('POST /booking — fitur booking harus sesuai paket klinik', () => {
+    it('ditolak 402 kalau paket klinik tidak punya fitur booking', async () => {
+      const { appointmentRoutes } = await import('../../modules/appointment/appointment.routes')
+      const createMock = vi.fn()
+      const prisma = fullMockPrisma({
+        appointment: { findFirst: vi.fn().mockResolvedValue(null), create: createMock },
+        branch: { findUnique: vi.fn().mockResolvedValue({ id: BigInt(1), tenantId: BigInt(1) }) },
+        tenantSubscription: {
+          findUnique: vi.fn().mockResolvedValue({ plan: { name: 'Free', features: { booking: false } } }),
+        },
+      })
+      const app = await buildApp(appointmentRoutes, prisma)
+
+      const res = await app.inject({
+        method: 'POST', url: '/api/booking',
+        payload: {
+          branchId: '1', doctorUserId: '2', ownerName: 'Budi', ownerPhone: '08123456789',
+          petName: 'Mochi', petCategory: 'Kucing', appointmentDate: '2026-07-01',
+          appointmentTime: '09:00', complaint: 'Demam',
+        },
+      })
+
+      expect(res.statusCode).toBe(402)
+      expect(createMock).not.toHaveBeenCalled()
+      await app.close()
+    })
+
+    it('diizinkan kalau paket klinik punya fitur booking', async () => {
+      const { appointmentRoutes } = await import('../../modules/appointment/appointment.routes')
+      const prisma = fullMockPrisma({
+        appointment: { findFirst: vi.fn().mockResolvedValue(null), create: vi.fn().mockResolvedValue(mockAppointment) },
+        branch: { findUnique: vi.fn().mockResolvedValue({ id: BigInt(1), tenantId: BigInt(1) }) },
+        whatsappLog: { create: vi.fn().mockResolvedValue({ id: BigInt(1) }) },
+        tenantSubscription: {
+          findUnique: vi.fn().mockResolvedValue({ plan: { name: 'Starter', features: { booking: true } } }),
+        },
+      })
+      const app = await buildApp(appointmentRoutes, prisma)
+
+      const res = await app.inject({
+        method: 'POST', url: '/api/booking',
+        payload: {
+          branchId: '1', doctorUserId: '2', ownerName: 'Budi', ownerPhone: '08123456789',
+          petName: 'Mochi', petCategory: 'Kucing', appointmentDate: '2026-07-01',
+          appointmentTime: '09:00', complaint: 'Demam',
+        },
+      })
+
+      expect([200, 201]).toContain(res.statusCode)
+      await app.close()
+    })
+  })
 })

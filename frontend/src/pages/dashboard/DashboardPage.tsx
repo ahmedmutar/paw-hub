@@ -79,6 +79,74 @@ function TrialBanner() {
   )
 }
 
+// ─── Banner Batas Paket ───────────────────────────────────────────────────────
+
+interface BillingUsage {
+  branches: { used: number; limit: number; pct: number }
+  users:    { used: number; limit: number; pct: number }
+  patients: { used: number; limit: number; pct: number }
+}
+
+function UsageLimitBanner() {
+  const navigate = useNavigate()
+  const user = useAuthStore((s) => s.user)
+
+  const { data } = useQuery<{ data: BillingUsage }>({
+    queryKey: ['billing-usage'],
+    queryFn: () => api.get('/billing/usage').then(r => r.data),
+    enabled: user?.role === 'admin',
+    staleTime: 5 * 60_000,
+  })
+
+  const usage = data?.data
+  if (!usage) return null
+
+  const nearing = (
+    [
+      { key: 'branches', label: 'cabang', ...usage.branches },
+      { key: 'users',    label: 'user',   ...usage.users },
+      { key: 'patients', label: 'pasien', ...usage.patients },
+    ] as const
+  )
+    .filter((r) => r.pct >= 80)
+    .sort((a, b) => b.pct - a.pct)[0]
+
+  if (!nearing) return null
+
+  const atLimit = nearing.pct >= 100
+
+  return (
+    <div
+      className="flex items-center justify-between gap-3 p-4 rounded-2xl"
+      style={{
+        background: atLimit ? 'var(--red-lt)' : 'var(--yellow-lt)',
+        border: `1.5px solid ${atLimit ? 'var(--red)' : 'var(--yellow)'}`,
+      }}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="text-xl">{atLimit ? '🚫' : '⚠️'}</span>
+        <div className="min-w-0">
+          <p className="text-sm font-bold truncate" style={{ color: atLimit ? 'var(--red)' : '#C98A00' }}>
+            {atLimit
+              ? `Batas ${nearing.label} paket Anda sudah penuh (${nearing.used}/${nearing.limit})`
+              : `Pemakaian ${nearing.label} sudah ${nearing.pct}% dari batas paket (${nearing.used}/${nearing.limit})`}
+          </p>
+          <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--text-soft)' }}>
+            Upgrade paket supaya tidak terganggu saat klinik terus berkembang.
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={() => navigate('/billing')}
+        className="px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap"
+        style={{ background: atLimit ? 'var(--red)' : 'var(--orange)', color: '#fff' }}
+      >
+        Upgrade Paket
+      </button>
+    </div>
+  )
+}
+
 // ─── Mini Bar Chart ───────────────────────────────────────────────────────────
 
 function TrendChart({ data }: { data: DashboardStats['trend'] }) {
@@ -155,6 +223,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <TrialBanner />
+      <UsageLimitBanner />
 
       {/* Greeting */}
       <div>

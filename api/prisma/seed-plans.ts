@@ -10,8 +10,8 @@ async function main() {
       priceMonthly: 0,
       priceYearly:  0,
       maxBranches:  1,
-      maxUsers:     3,
-      maxPatients:  100,
+      maxUsers:     2,
+      maxPatients:  60,
       features:     { whatsapp: false, booking: false, grooming: false, reminder: false, portal: false },
     },
     {

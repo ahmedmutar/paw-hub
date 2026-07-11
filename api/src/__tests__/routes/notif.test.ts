@@ -49,3 +49,23 @@ describe('notif.routes — isolasi antar-tenant (IDOR)', () => {
     await app.close()
   })
 })
+
+describe('POST /notif/wa/send — fitur WhatsApp harus sesuai paket klinik', () => {
+  it('ditolak 402 kalau paket klinik tidak punya fitur whatsapp', async () => {
+    const createLogMock = vi.fn()
+    const prisma = fullMockPrisma({
+      whatsappLog: { create: createLogMock },
+      tenantSubscription: {
+        findUnique: vi.fn().mockResolvedValue({ plan: { name: 'Free', features: { whatsapp: false } } }),
+      },
+    })
+    const app = await buildApp(notifRoutes, prisma, DEFAULT_AUTH_USER)
+    const res = await app.inject({
+      method: 'POST', url: '/api/notif/wa/send',
+      payload: { phone: '08123456789', message: 'Halo' },
+    })
+    expect(res.statusCode).toBe(402)
+    expect(createLogMock).not.toHaveBeenCalled()
+    await app.close()
+  })
+})

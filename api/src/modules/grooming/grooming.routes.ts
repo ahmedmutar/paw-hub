@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { authenticate, requireRole } from '../../middleware/auth'
+import { checkPlanFeature } from '../../lib/planLimits'
 
 const SESSION_INCLUDE = {
   patient: { select: { id: true, petName: true, species: true, breed: true, owner: { select: { id: true, ownerName: true, phoneNumber: true } } } },
@@ -167,6 +168,9 @@ export async function groomingRoutes(app: FastifyInstance) {
     if (!body.success) return reply.status(400).send({ message: 'Input tidak valid', errors: body.error.flatten() })
 
     const { patientId, groomerId, packageId, scheduledAt, notes, discount } = body.data
+
+    const featureCheck = await checkPlanFeature(app, req.authUser.tenantId, 'grooming')
+    if (!featureCheck.ok) return reply.status(402).send({ message: featureCheck.message })
 
     // Ambil harga dari paket (harus milik cabang/tenant sendiri)
     const pkg = await app.prisma.groomingPackage.findFirst({

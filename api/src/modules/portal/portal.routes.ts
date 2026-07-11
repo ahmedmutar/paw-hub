@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import jwt from '@fastify/jwt'
 import { sendWhatsapp } from '../notif/wa.service'
+import { checkPlanFeature } from '../../lib/planLimits'
 
 function generateOTP(): string {
   return String(Math.floor(100000 + Math.random() * 900000))
@@ -57,6 +58,13 @@ export async function portalRoutes(app: FastifyInstance) {
     })
     if (!owner) {
       // Jangan reveal apakah nomor terdaftar atau tidak
+      return reply.send({ message: 'Jika nomor Anda terdaftar, OTP akan dikirim dalam beberapa detik.' })
+    }
+
+    const branch = await app.prisma.branch.findUnique({ where: { id: owner.branchId }, select: { tenantId: true } })
+    const featureCheck = await checkPlanFeature(app, branch?.tenantId ?? null, 'portal')
+    if (!featureCheck.ok) {
+      // Jangan reveal status paket klinik lewat respons — tetap generik seperti "nomor tidak terdaftar"
       return reply.send({ message: 'Jika nomor Anda terdaftar, OTP akan dikirim dalam beberapa detik.' })
     }
 

@@ -117,4 +117,52 @@ describe('pasien.routes — isolasi antar-cabang (IDOR)', () => {
     expect(updateMock).not.toHaveBeenCalled()
     await app.close()
   })
+
+  describe('POST /pasien — batas paket', () => {
+    it('ditolak 402 saat jumlah pasien tenant sudah mencapai batas maksimal paket', async () => {
+      const { pasienRoutes } = await import('../../modules/pasien/pasien.routes')
+      const createMock = vi.fn()
+      const prisma = fullMockPrisma({
+        owner:   { findFirst: vi.fn().mockResolvedValue(mockOwner) },
+        patient: { create: createMock },
+        tenantSubscription: {
+          findUnique: vi.fn().mockResolvedValue({ plan: { name: 'Free', maxPatients: 60, features: {} } }),
+        },
+      })
+      ;(prisma as any).patient.count = vi.fn().mockResolvedValue(60)
+      const app = await buildApp(pasienRoutes, prisma)
+
+      const res = await app.inject({
+        method: 'POST', url: '/api/pasien',
+        payload: { petCategory: 'Kucing', petName: 'Mochi', ownerId: '1' },
+      })
+
+      expect(res.statusCode).toBe(402)
+      expect(createMock).not.toHaveBeenCalled()
+      await app.close()
+    })
+
+    it('diizinkan saat masih di bawah batas maksimal paket', async () => {
+      const { pasienRoutes } = await import('../../modules/pasien/pasien.routes')
+      const createMock = vi.fn().mockResolvedValue(mockPatient)
+      const prisma = fullMockPrisma({
+        owner:   { findFirst: vi.fn().mockResolvedValue(mockOwner) },
+        patient: { create: createMock },
+        tenantSubscription: {
+          findUnique: vi.fn().mockResolvedValue({ plan: { name: 'Free', maxPatients: 60, features: {} } }),
+        },
+      })
+      ;(prisma as any).patient.count = vi.fn().mockResolvedValue(10)
+      const app = await buildApp(pasienRoutes, prisma)
+
+      const res = await app.inject({
+        method: 'POST', url: '/api/pasien',
+        payload: { petCategory: 'Kucing', petName: 'Mochi', ownerId: '1' },
+      })
+
+      expect(res.statusCode).toBe(201)
+      expect(createMock).toHaveBeenCalled()
+      await app.close()
+    })
+  })
 })

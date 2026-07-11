@@ -67,3 +67,20 @@ describe('reminder.routes — isolasi antar-tenant (IDOR)', () => {
     await app.close()
   })
 })
+
+describe('POST /reminder/run — fitur reminder harus sesuai paket klinik', () => {
+  it('ditolak 402 kalau paket klinik tidak punya fitur reminder', async () => {
+    const findManyMock = vi.fn().mockResolvedValue([])
+    const prisma = fullMockPrisma({
+      vaccinationRecord: { findMany: findManyMock },
+      tenantSubscription: {
+        findUnique: vi.fn().mockResolvedValue({ plan: { name: 'Free', features: { reminder: false } } }),
+      },
+    })
+    const app = await buildApp(reminderRoutes, prisma, DEFAULT_AUTH_USER)
+    const res = await app.inject({ method: 'POST', url: '/api/reminder/run' })
+    expect(res.statusCode).toBe(402)
+    expect(findManyMock).not.toHaveBeenCalled()
+    await app.close()
+  })
+})

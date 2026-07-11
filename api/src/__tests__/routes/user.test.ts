@@ -129,4 +129,53 @@ describe('user.routes — isolasi antar-tenant (IDOR)', () => {
       await app.close()
     })
   })
+
+  describe('POST /user — batas paket', () => {
+    it('ditolak 402 saat jumlah user tenant sudah mencapai batas maksimal paket', async () => {
+      const createMock = vi.fn()
+      const prisma = fullMockPrisma({
+        user: { findFirst: vi.fn().mockResolvedValue(null), create: createMock },
+        branch: { findUnique: vi.fn().mockResolvedValue({ id: BigInt(1), branchCode: 'C1' }) },
+        tenantSubscription: {
+          findUnique: vi.fn().mockResolvedValue({ plan: { name: 'Free', maxUsers: 2, features: {} } }),
+        },
+      })
+      ;(prisma as any).user.count = vi.fn().mockResolvedValue(2)
+      const app = await buildApp(userRoutes, prisma, DEFAULT_AUTH_USER)
+
+      const res = await app.inject({
+        method: 'POST', url: '/api/user',
+        payload: { username: 'staf-baru', fullname: 'Staf Baru', password: 'password123', role: 'karyawan', branchId: '1' },
+      })
+
+      expect(res.statusCode).toBe(402)
+      expect(createMock).not.toHaveBeenCalled()
+      await app.close()
+    })
+  })
+
+  describe('POST /user — staff baru harus ditandai tenantId, bukan dibiarkan null', () => {
+    it('user baru dibuat dengan tenantId milik admin yang membuatnya', async () => {
+      const createMock = vi.fn().mockResolvedValue({
+        id: BigInt(3), staffingNumber: 'BVC-U-C1-0001', username: 'staf-baru',
+        fullname: 'Staf Baru', role: 'karyawan', status: true, branch: { branchName: 'Cabang 1' },
+      })
+      const prisma = fullMockPrisma({
+        user: { findFirst: vi.fn().mockResolvedValue(null), create: createMock },
+        branch: { findUnique: vi.fn().mockResolvedValue({ id: BigInt(1), branchCode: 'C1' }) },
+      })
+      const app = await buildApp(userRoutes, prisma, DEFAULT_AUTH_USER)
+
+      const res = await app.inject({
+        method: 'POST', url: '/api/user',
+        payload: { username: 'staf-baru', fullname: 'Staf Baru', password: 'password123', role: 'karyawan', branchId: '1' },
+      })
+
+      expect(res.statusCode).toBe(201)
+      expect(createMock).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ tenantId: DEFAULT_AUTH_USER.tenantId }) })
+      )
+      await app.close()
+    })
+  })
 })

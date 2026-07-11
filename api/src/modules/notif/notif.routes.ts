@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { authenticate, requireRole } from '../../middleware/auth'
 import { sendWhatsapp } from './wa.service'
 import { WaNotifType } from '@prisma/client'
+import { checkPlanFeature } from '../../lib/planLimits'
 
 // WhatsappLog cuma punya branchId (tidak ada tenantId langsung). Admin
 // dikunci ke seluruh cabang di tenant-nya, non-admin dikunci ke cabang sendiri.
@@ -85,6 +86,9 @@ export async function notifRoutes(app: FastifyInstance) {
     if (!body.success) {
       return reply.status(400).send({ message: 'Input tidak valid', errors: body.error.flatten().fieldErrors })
     }
+
+    const featureCheck = await checkPlanFeature(app, req.authUser.tenantId, 'whatsapp')
+    if (!featureCheck.ok) return reply.status(402).send({ message: featureCheck.message })
 
     const { phone, message, type, patientId, registrationId, recipientName } = body.data
 

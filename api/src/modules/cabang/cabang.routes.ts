@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { authenticate, requireRole, tenantFilter } from '../../middleware/auth'
+import { checkPlanLimit } from '../../lib/planLimits'
 
 const branchSchema = z.object({
   branchCode:         z.string().min(1).max(10).toUpperCase(),
@@ -77,6 +78,9 @@ export async function cabangRoutes(app: FastifyInstance) {
 
     const existing = await app.prisma.branch.findUnique({ where: { branchCode: body.data.branchCode } })
     if (existing) return reply.status(400).send({ message: 'Kode cabang sudah digunakan.' })
+
+    const limitCheck = await checkPlanLimit(app, req.authUser.tenantId, 'branches')
+    if (!limitCheck.ok) return reply.status(402).send({ message: limitCheck.message })
 
     const branch = await app.prisma.branch.create({
       data: {
