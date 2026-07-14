@@ -5,9 +5,18 @@ import { authenticate } from '../../middleware/auth'
 // cuma branchId. Admin dikunci ke seluruh cabang di tenant-nya, non-admin
 // dikunci ke cabang sendiri.
 function dashboardBranchFilter(user: any) {
-  return user.role === 'admin'
-    ? { branch: { tenantId: BigInt(user.tenantId) } }
-    : { branchId: BigInt(user.branchId) }
+  if (user.role !== 'admin') return { branchId: BigInt(user.branchId) }
+  // Instalasi lama tanpa tenant (tenantId null) — jangan crash, admin lihat semua cabang.
+  return user.tenantId ? { branch: { tenantId: BigInt(user.tenantId) } } : {}
+}
+
+// Sama seperti EXPIRY_WARNING_DAYS di gudang.routes.ts.
+const EXPIRY_WARNING_DAYS = 30
+function expiryWindowEnd() {
+  const d = new Date()
+  d.setDate(d.getDate() + EXPIRY_WARNING_DAYS)
+  d.setHours(23, 59, 59, 999)
+  return d
 }
 
 export async function dashboardRoutes(app: FastifyInstance) {
@@ -34,6 +43,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
       todayPayments,
       monthPayments,
       lowStockItems,
+      nearExpiryItems,
       recentPayments,
       weekRegistrations,
       topServices,
@@ -90,6 +100,13 @@ export async function dashboardRoutes(app: FastifyInstance) {
         select: { id: true, itemName: true, totalItem: true, limitItem: true },
         orderBy: { totalItem: 'asc' },
         take: 50,
+      }),
+      // Barang mendekati kadaluwarsa (termasuk yang sudah lewat)
+      app.prisma.listOfItem.findMany({
+        where: { ...branchFilter, isDeleted: false, isActive: true, expiredDate: { not: null, lte: expiryWindowEnd() } },
+        select: { id: true, itemName: true, totalItem: true, expiredDate: true },
+        orderBy: { expiredDate: 'asc' },
+        take: 5,
       }),
       // 5 transaksi terakhir
       app.prisma.listOfPayment.findMany({
@@ -199,6 +216,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
           transactions: monthPayments.length,
         },
         lowStock: lowStock.slice(0, 5),
+        nearExpiry: nearExpiryItems,
         recentTransactions: recentTx,
         trend,
         topServices: topServicesResult,

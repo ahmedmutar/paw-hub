@@ -5,9 +5,19 @@ import { authenticate } from '../../middleware/auth'
 // langsung). Admin dikunci ke seluruh cabang di tenant-nya, non-admin
 // dikunci ke cabang sendiri.
 function gudangBranchFilter(user: any) {
-  return user.role === 'admin'
-    ? { branch: { tenantId: BigInt(user.tenantId) } }
-    : { branchId: BigInt(user.branchId) }
+  if (user.role !== 'admin') return { branchId: BigInt(user.branchId) }
+  // Instalasi lama tanpa tenant (tenantId null) — jangan crash, admin lihat semua cabang.
+  return user.tenantId ? { branch: { tenantId: BigInt(user.tenantId) } } : {}
+}
+
+// Barang dianggap "mendekati kadaluwarsa" kalau expiredDate-nya jatuh dalam
+// N hari ke depan — termasuk yang sudah lewat (belum sempat ditarik/dibuang).
+const EXPIRY_WARNING_DAYS = 30
+function expiryWindowEnd() {
+  const d = new Date()
+  d.setDate(d.getDate() + EXPIRY_WARNING_DAYS)
+  d.setHours(23, 59, 59, 999)
+  return d
 }
 
 export async function gudangRoutes(app: FastifyInstance) {
@@ -17,7 +27,7 @@ export async function gudangRoutes(app: FastifyInstance) {
     const user = (req as any).authUser
     const branchFilter = gudangBranchFilter(user)
 
-    const [totalItems, lowStock, outOfStock, totalCategories, totalUnits, recentMovements] =
+    const [totalItems, lowStock, outOfStock, totalCategories, totalUnits, recentMovements, nearExpiry] =
       await Promise.all([
         app.prisma.listOfItem.count({ where: { ...branchFilter, isDeleted: false } }),
         app.prisma.listOfItem.count({
@@ -42,10 +52,13 @@ export async function gudangRoutes(app: FastifyInstance) {
             createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
           },
         }),
+        app.prisma.listOfItem.count({
+          where: { ...branchFilter, isDeleted: false, isActive: true, expiredDate: { not: null, lte: expiryWindowEnd() } },
+        }),
       ])
 
     return reply.send({
-      data: { totalItems, lowStock, outOfStock, totalCategories, totalUnits, recentMovements },
+      data: { totalItems, lowStock, outOfStock, totalCategories, totalUnits, recentMovements, nearExpiry },
     })
   })
 
@@ -553,5 +566,25 @@ export async function gudangRoutes(app: FastifyInstance) {
     )
 
     return reply.send({ data: lowStockItems })
+  })
+
+  // ─── NEAR-EXPIRY ALERT ────────────────────────────────────────────────────────
+
+  app.get('/gudang/near-expiry', { preHandler: [authenticate] }, async (req, reply) => {
+    const user = (req as any).authUser
+    const branchFilter = gudangBranchFilter(user)
+
+    const data = await app.prisma.listOfItem.findMany({
+      where: {
+        ...branchFilter,
+        isDeleted: false,
+        isActive: true,
+        expiredDate: { not: null, lte: expiryWindowEnd() },
+      },
+      include: { unitItem: true, categoryItem: true },
+      orderBy: { expiredDate: 'asc' },
+    })
+
+    return reply.send({ data })
   })
 }

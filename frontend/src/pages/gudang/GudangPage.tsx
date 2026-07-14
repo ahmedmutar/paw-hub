@@ -4,7 +4,7 @@ import {
   Package, AlertTriangle, TrendingDown, Tag, Ruler,
   Plus, Search, Edit2, Trash2, ChevronLeft, ChevronRight,
   ArrowUpCircle, ArrowDownCircle, RefreshCw, History,
-  ToggleLeft, ToggleRight, DollarSign, X, ChevronDown,
+  ToggleLeft, ToggleRight, DollarSign, X, ChevronDown, Clock,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth.store'
@@ -43,6 +43,7 @@ interface StockMovement {
 interface Stats {
   totalItems: number; lowStock: number; outOfStock: number
   totalCategories: number; totalUnits: number; recentMovements: number
+  nearExpiry: number
 }
 
 const fmt = (n: string | number) =>
@@ -1227,12 +1228,85 @@ function LowStockTab() {
   )
 }
 
+// ─── TAB: Kadaluwarsa ────────────────────────────────────────────────────────
+
+function ExpiryTab() {
+  const { data, isLoading } = useQuery<{ data: ListOfItem[] }>({
+    queryKey: ['gudang-near-expiry'],
+    queryFn: () => api.get('/gudang/near-expiry').then(r => r.data),
+  })
+
+  return (
+    <div>
+      <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
+        <Clock className="w-5 h-5 text-amber-500 shrink-0" />
+        <p className="text-sm text-amber-800">
+          Barang dengan tanggal kadaluwarsa dalam 30 hari ke depan, termasuk yang sudah lewat. Segera tarik atau prioritaskan pemakaiannya.
+        </p>
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Barang</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Kategori</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Stok</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Kadaluwarsa</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {isLoading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <tr key={i}><td colSpan={5} className="px-4 py-3"><div className="h-4 bg-gray-100 rounded animate-pulse" /></td></tr>
+                ))
+              ) : !data?.data.length ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-12">
+                    <div className="flex flex-col items-center gap-2">
+                      <Package className="w-10 h-10 text-gray-200" />
+                      <p className="text-gray-400">Belum ada yang mendekati kadaluwarsa 👍</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : data.data.map(item => {
+                const expired = item.expiredDate ? new Date(item.expiredDate) < new Date() : false
+                return (
+                  <tr key={item.id} className={cn('hover:bg-gray-50', expired && 'bg-red-50/30')}>
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-gray-900">{item.itemName}</p>
+                      <p className="text-xs text-gray-400">{item.unitItem?.unitName}</p>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{item.categoryItem?.categoryName}</td>
+                    <td className="px-4 py-3 text-right font-bold text-gray-700">{fmtNum(item.totalItem)}</td>
+                    <td className={cn('px-4 py-3 text-right font-medium', expired ? 'text-red-600' : 'text-amber-600')}>
+                      {item.expiredDate ? format(new Date(item.expiredDate), 'd MMM yyyy', { locale: localeId }) : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {expired
+                        ? <span className="badge badge-danger text-xs">Kadaluwarsa</span>
+                        : <span className="badge badge-warning text-xs">Segera</span>}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 
 const TABS = [
   { key: 'barang',   label: 'Stok Barang',     icon: Package },
   { key: 'mutasi',   label: 'Mutasi Stok',      icon: RefreshCw },
   { key: 'lowstock', label: 'Stok Minim',       icon: AlertTriangle },
+  { key: 'expiry',   label: 'Kadaluwarsa',      icon: Clock },
   { key: 'master',   label: 'Kategori & Satuan', icon: Tag },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
@@ -1275,6 +1349,11 @@ export default function GudangPage() {
                 {(stats?.data?.outOfStock ?? 0) + (stats?.data?.lowStock ?? 0)}
               </span>
             )}
+            {key === 'expiry' && (stats?.data?.nearExpiry ?? 0) > 0 && (
+              <span className="ml-0.5 px-1.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-700 rounded-full">
+                {stats?.data?.nearExpiry}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -1282,6 +1361,7 @@ export default function GudangPage() {
       {activeTab === 'barang'   && <BarangTab />}
       {activeTab === 'mutasi'   && <MutasiTab />}
       {activeTab === 'lowstock' && <LowStockTab />}
+      {activeTab === 'expiry'   && <ExpiryTab />}
       {activeTab === 'master'   && <MasterDataTab />}
     </div>
   )

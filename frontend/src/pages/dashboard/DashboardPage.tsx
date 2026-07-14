@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Receipt } from 'lucide-react'
+import { ArrowRight, Receipt, Clock } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth.store'
 import { Badge } from '@/components/ui'
@@ -20,6 +20,7 @@ interface DashboardStats {
   }
   month: { revenue: number; transactions: number }
   lowStock: { id: string; itemName: string; totalItem: string; limitItem: string }[]
+  nearExpiry: { id: string; itemName: string; totalItem: string; expiredDate: string }[]
   recentTransactions: {
     id: string; createdAt: string; patientName: string; methodName: string; total: number
   }[]
@@ -209,6 +210,7 @@ export default function DashboardPage() {
     if (isLoading || !s) return null
     if (s.today.pendingKasir > 0) return { text: `Ada ${s.today.pendingKasir} pasien yang belum bayar, cek dulu yuk.`, tone: 'warn' as const }
     if (s.lowStock.length > 0) return { text: `${s.lowStock.length} item stok mulai menipis. Sempatkan cek gudang.`, tone: 'warn' as const }
+    if (s.nearExpiry.length > 0) return { text: `${s.nearExpiry.length} item stok mendekati atau sudah kadaluwarsa.`, tone: 'warn' as const }
     if (s.today.registrations === 0) return { text: 'Belum ada pasien terdaftar hari ini. Tenang, masih pagi.', tone: 'calm' as const }
     if (s.today.activeQueue > 0) return { text: `${s.today.activeQueue} pasien lagi nunggu diperiksa sekarang.`, tone: 'info' as const }
     return { text: 'Semua antrian hari ini sudah kelar. Kerja bagus! 🎉', tone: 'good' as const }
@@ -512,6 +514,63 @@ export default function DashboardPage() {
           </div>
         </div>
 
+      </div>
+
+      {/* Stok Mendekati Kadaluwarsa */}
+      <div className="card">
+        <div className="flex items-center justify-between p-5" style={{ borderBottom: '1.5px solid var(--border)' }}>
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4" style={{ color: 'var(--text-soft)' }} />
+            <h3 className="font-display font-extrabold text-sm" style={{ color: 'var(--text-dark)' }}>Stok Mendekati Kadaluwarsa</h3>
+          </div>
+          <button onClick={() => navigate('/gudang')}
+            className="text-xs font-bold flex items-center gap-1" style={{ color: 'var(--orange)' }}>
+            Lihat gudang <ArrowRight className="w-3 h-3" />
+          </button>
+        </div>
+        <div>
+          {isLoading ? (
+            Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="px-5 py-3 animate-pulse flex justify-between gap-4" style={{ borderBottom: '1px solid var(--border)' }}>
+                <div className="space-y-1.5 flex-1">
+                  <div className="h-3 rounded w-1/2" style={{ background: 'var(--warm-bg)' }} />
+                  <div className="h-2.5 rounded w-1/4" style={{ background: 'var(--warm-bg)' }} />
+                </div>
+                <div className="h-5 rounded w-16" style={{ background: 'var(--warm-bg)' }} />
+              </div>
+            ))
+          ) : !s?.nearExpiry.length ? (
+            <div className="flex flex-col items-center py-10 gap-1.5 text-center">
+              <span className="text-3xl">👍</span>
+              <p className="text-sm font-bold" style={{ color: 'var(--text-dark)' }}>Belum ada yang mendekati kadaluwarsa</p>
+              <p className="text-xs font-medium" style={{ color: 'var(--text-soft)' }}>Item dicek dalam jendela 30 hari ke depan.</p>
+            </div>
+          ) : s.nearExpiry.map((item, i) => {
+            const expired = new Date(item.expiredDate) < new Date()
+            return (
+              <div
+                key={item.id}
+                className="flex items-center justify-between px-5 py-3"
+                style={{ borderBottom: i < s.nearExpiry.length - 1 ? '1px solid var(--border)' : 'none' }}
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-dark)' }}>{item.itemName}</p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--text-soft)' }}>
+                    Stok: {Number(item.totalItem).toLocaleString('id-ID')}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <span className="font-display font-extrabold text-sm" style={{ color: expired ? 'var(--red)' : '#C98A00' }}>
+                    {format(new Date(item.expiredDate), 'd MMM yyyy', { locale: localeId })}
+                  </span>
+                  <div className="mt-1">
+                    <Badge variant={expired ? 'red' : 'yellow'}>{expired ? 'Kadaluwarsa' : 'Segera'}</Badge>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
