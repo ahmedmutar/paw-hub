@@ -246,3 +246,14 @@ describe('appointment.routes — isolasi antar-cabang & antar-tenant (IDOR)', ()
     })
   })
 })
+
+describe('GET /appointment — admin instalasi lama (tenantId null) tidak boleh crash', () => {
+  it('tetap 200 tanpa filter tenant saat admin.tenantId null', async () => {
+    const { appointmentRoutes } = await import('../../modules/appointment/appointment.routes')
+    const prisma = fullMockPrisma({ appointment: { findMany: vi.fn().mockResolvedValue([]) } })
+    const app = await buildApp(appointmentRoutes, prisma, { ...DEFAULT_AUTH_USER, tenantId: null as any })
+    const res = await app.inject({ method: 'GET', url: '/api/appointment' })
+    expect(res.statusCode).toBe(200)
+    await app.close()
+  })
+})

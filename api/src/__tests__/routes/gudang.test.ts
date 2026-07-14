@@ -148,6 +148,19 @@ describe('gudang.routes — isolasi antar-cabang & antar-tenant (IDOR)', () => {
     await app.close()
   })
 
+  it('POST /gudang/kategori dengan branchId, admin instalasi lama (tenantId null) tidak boleh crash', async () => {
+    const { gudangRoutes } = await import('../../modules/gudang/gudang.routes')
+    const createMock = vi.fn().mockResolvedValue({ id: BigInt(1) })
+    const prisma = fullMockPrisma({
+      branch: { findFirst: vi.fn().mockResolvedValue({ id: BigInt(999) }) },
+      categoryItem: { create: createMock },
+    })
+    const app = await buildApp(gudangRoutes, prisma, { ...DEFAULT_AUTH_USER, tenantId: null as any })
+    const res = await app.inject({ method: 'POST', url: '/api/gudang/kategori', payload: { categoryName: 'Test', branchId: '999' } })
+    expect(res.statusCode).toBe(201)
+    await app.close()
+  })
+
   it('PUT /gudang/satuan/:id milik tenant lain harus 404', async () => {
     const { gudangRoutes } = await import('../../modules/gudang/gudang.routes')
     const updateMock = vi.fn().mockResolvedValue({ ...OTHER_TENANT_UNIT, unitName: 'Diubah' })

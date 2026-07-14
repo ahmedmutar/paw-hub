@@ -140,4 +140,29 @@ describe('pengeluaran.routes — isolasi antar-cabang & antar-tenant (IDOR)', ()
       expect((prisma.expense as any).create).not.toHaveBeenCalled()
     })
   })
+
+  describe('admin instalasi lama (tenantId null) tidak boleh crash', () => {
+    it('GET /pengeluaran/stats tetap 200 tanpa filter tenant', async () => {
+      const prisma = fullMockPrisma({
+        expense: { aggregate: vi.fn().mockResolvedValue({ _sum: { amountOverall: 0 }, _count: { id: 0 } }), groupBy: vi.fn().mockResolvedValue([]) },
+      })
+      const app = await buildApp(pengeluaranRoutes, prisma, { ...DEFAULT_AUTH_USER, tenantId: null as any })
+      const res = await app.inject({ method: 'GET', url: '/api/pengeluaran/stats' })
+      expect(res.statusCode).toBe(200)
+    })
+
+    it('POST /pengeluaran dengan branchId tetap berhasil (dicek by id saja)', async () => {
+      const createMock = vi.fn().mockResolvedValue({ id: BigInt(1) })
+      const prisma = fullMockPrisma({
+        branch: { findFirst: vi.fn().mockResolvedValue({ id: BigInt(999) }) },
+        expense: { create: createMock },
+      })
+      const app = await buildApp(pengeluaranRoutes, prisma, { ...DEFAULT_AUTH_USER, tenantId: null as any })
+      const res = await app.inject({
+        method: 'POST', url: '/api/pengeluaran',
+        payload: { itemName: 'Test', quantity: 1, amount: 1000, branchId: '999' },
+      })
+      expect(res.statusCode).toBe(201)
+    })
+  })
 })

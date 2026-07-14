@@ -205,3 +205,14 @@ describe('grooming.routes — isolasi antar-cabang & antar-tenant (IDOR)', () =>
     await app.close()
   })
 })
+
+describe('GET /grooming/paket — admin instalasi lama (tenantId null) tidak boleh crash', () => {
+  it('tetap 200 tanpa filter tenant saat admin.tenantId null', async () => {
+    const { groomingRoutes } = await import('../../modules/grooming/grooming.routes')
+    const prisma = fullMockPrisma({ groomingPackage: { findMany: vi.fn().mockResolvedValue([]) } })
+    const app = await buildApp(groomingRoutes, prisma, { ...ADMIN_USER, tenantId: null as any })
+    const res = await app.inject({ method: 'GET', url: '/api/grooming/paket' })
+    expect(res.statusCode).toBe(200)
+    await app.close()
+  })
+})

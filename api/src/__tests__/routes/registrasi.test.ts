@@ -81,3 +81,13 @@ describe('registrasi.routes — isolasi antar-cabang (IDOR)', () => {
     await app.close()
   })
 })
+
+describe('GET /rawat-inap/stats — admin instalasi lama (tenantId null) tidak boleh crash', () => {
+  it('tetap 200 tanpa filter tenant saat admin.tenantId null', async () => {
+    const prisma = fullMockPrisma({ inPatient: { count: vi.fn().mockResolvedValue(0) } })
+    const app = await buildApp(registrasiRoutes, prisma, { ...DEFAULT_AUTH_USER, tenantId: null as any })
+    const res = await app.inject({ method: 'GET', url: '/api/rawat-inap/stats' })
+    expect(res.statusCode).toBe(200)
+    await app.close()
+  })
+})

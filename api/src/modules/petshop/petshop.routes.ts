@@ -8,18 +8,17 @@ export async function petshopRoutes(app: FastifyInstance) {
   // Admin dikunci ke seluruh cabang di tenant-nya (bukan `{}` kosong — itu bocor
   // lintas tenant), non-admin dikunci ke cabang sendiri.
   function branchFilter(user: any, qBranch?: string) {
-    if (user.role === 'admin') {
-      if (qBranch) return { branchId: BigInt(qBranch), branch: { tenantId: BigInt(user.tenantId) } }
-      return { branch: { tenantId: BigInt(user.tenantId) } }
-    }
-    return { branchId: BigInt(user.branchId) }
+    if (user.role !== 'admin') return { branchId: BigInt(user.branchId) }
+    // Instalasi lama tanpa tenant (tenantId null) — jangan crash, admin lihat semua cabang.
+    if (!user.tenantId) return qBranch ? { branchId: BigInt(qBranch) } : {}
+    if (qBranch) return { branchId: BigInt(qBranch), branch: { tenantId: BigInt(user.tenantId) } }
+    return { branch: { tenantId: BigInt(user.tenantId) } }
   }
 
   // PaymentPetshop tidak punya branchId langsung — scope lewat relasi user.
   function trxUserFilter(user: any) {
-    return user.role === 'admin'
-      ? { user: { branch: { tenantId: BigInt(user.tenantId) } } }
-      : { user: { branchId: BigInt(user.branchId) } }
+    if (user.role !== 'admin') return { user: { branchId: BigInt(user.branchId) } }
+    return user.tenantId ? { user: { branch: { tenantId: BigInt(user.tenantId) } } } : {}
   }
 
   // ─── PRODUK ──────────────────────────────────────────────────────────────────
@@ -85,7 +84,7 @@ export async function petshopRoutes(app: FastifyInstance) {
     }
 
     const targetBranch = await app.prisma.branch.findFirst({
-      where: { id: BigInt(branchId), tenantId: BigInt(user.tenantId) },
+      where: user.tenantId ? { id: BigInt(branchId), tenantId: BigInt(user.tenantId) } : { id: BigInt(branchId) },
     })
     if (!targetBranch) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
 

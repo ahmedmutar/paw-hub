@@ -69,3 +69,14 @@ describe('POST /notif/wa/send — fitur WhatsApp harus sesuai paket klinik', () 
     await app.close()
   })
 })
+
+describe('GET /notif/log — admin instalasi lama (tenantId null) tidak boleh crash', () => {
+  it('tetap 200 tanpa filter tenant saat admin.tenantId null', async () => {
+    const findManyMock = vi.fn().mockResolvedValue([])
+    const prisma = fullMockPrisma({ whatsappLog: { findMany: findManyMock, count: vi.fn().mockResolvedValue(0) } })
+    const app = await buildApp(notifRoutes, prisma, { ...DEFAULT_AUTH_USER, tenantId: null as any })
+    const res = await app.inject({ method: 'GET', url: '/api/notif/log' })
+    expect(res.statusCode).toBe(200)
+    await app.close()
+  })
+})

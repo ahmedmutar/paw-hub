@@ -84,3 +84,16 @@ describe('POST /reminder/run — fitur reminder harus sesuai paket klinik', () =
     await app.close()
   })
 })
+
+describe('GET /reminder/upcoming — admin instalasi lama (tenantId null) tidak boleh crash', () => {
+  it('tetap 200 tanpa filter tenant saat admin.tenantId null', async () => {
+    const prisma = fullMockPrisma({
+      vaccinationRecord: { findMany: vi.fn().mockResolvedValue([]) },
+      dewormingRecord: { findMany: vi.fn().mockResolvedValue([]) },
+    })
+    const app = await buildApp(reminderRoutes, prisma, { ...DEFAULT_AUTH_USER, tenantId: null as any })
+    const res = await app.inject({ method: 'GET', url: '/api/reminder/upcoming' })
+    expect(res.statusCode).toBe(200)
+    await app.close()
+  })
+})

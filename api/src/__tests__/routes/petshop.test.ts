@@ -253,3 +253,43 @@ describe('petshop.routes — isolasi antar-cabang & antar-tenant (IDOR)', () => 
     })
   })
 })
+
+describe('petshop.routes — admin instalasi lama (tenantId null) tidak boleh crash', () => {
+  it('GET /petshop/produk tetap 200 tanpa filter tenant', async () => {
+    const { petshopRoutes } = await import('../../modules/petshop/petshop.routes')
+    const prisma = fullMockPrisma({ listOfItemPetShop: { findMany: vi.fn().mockResolvedValue([]) } })
+    const app = await buildApp(petshopRoutes, prisma, { ...ADMIN_USER, tenantId: null as any })
+    const res = await app.inject({ method: 'GET', url: '/api/petshop/produk' })
+    expect(res.statusCode).toBe(200)
+    await app.close()
+  })
+
+  it('GET /petshop/stats tetap 200 tanpa filter tenant', async () => {
+    const { petshopRoutes } = await import('../../modules/petshop/petshop.routes')
+    const prisma = fullMockPrisma({
+      paymentPetshop: { findMany: vi.fn().mockResolvedValue([]) },
+      listOfItemPetShop: { count: vi.fn().mockResolvedValue(0) },
+    })
+    const app = await buildApp(petshopRoutes, prisma, { ...ADMIN_USER, tenantId: null as any })
+    const res = await app.inject({ method: 'GET', url: '/api/petshop/stats' })
+    expect(res.statusCode).toBe(200)
+    await app.close()
+  })
+
+  it('POST /petshop/produk dengan branchId tetap berhasil (dicek by id saja)', async () => {
+    const { petshopRoutes } = await import('../../modules/petshop/petshop.routes')
+    const createMock = vi.fn().mockResolvedValue(mockProduct)
+    const prisma = fullMockPrisma({
+      branch: { findFirst: vi.fn().mockResolvedValue({ id: BigInt(1) }) },
+      listOfItemPetShop: { create: createMock },
+      priceItemPetShop: { create: vi.fn().mockResolvedValue({ id: BigInt(1) }) },
+    })
+    const app = await buildApp(petshopRoutes, prisma, { ...ADMIN_USER, tenantId: null as any })
+    const res = await app.inject({
+      method: 'POST', url: '/api/petshop/produk',
+      payload: { itemName: 'Test', unitItemId: '1', categoryItemId: '1', branchId: '1', sellingPrice: 1000, capitalPrice: 500 },
+    })
+    expect(res.statusCode).toBe(201)
+    await app.close()
+  })
+})

@@ -205,3 +205,13 @@ describe('rekam-medis.routes — isolasi antar-cabang & antar-tenant (IDOR)', ()
     })
   })
 })
+
+describe('GET /rekam-medis/:patientId — admin instalasi lama (tenantId null) tidak boleh crash', () => {
+  it('tetap 200 tanpa filter tenant saat admin.tenantId null', async () => {
+    const prisma = fullMockPrisma({ patient: { findFirst: vi.fn().mockResolvedValue(OWN_PATIENT) } })
+    const app = await buildApp(rekamMedisRoutes, prisma, { ...DEFAULT_AUTH_USER, tenantId: null as any })
+    const res = await app.inject({ method: 'GET', url: '/api/rekam-medis/1' })
+    expect(res.statusCode).toBe(200)
+    await app.close()
+  })
+})

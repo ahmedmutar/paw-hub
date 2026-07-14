@@ -87,3 +87,16 @@ describe('laporan.routes — admin harus tetap discope ke tenant, bukan where ko
     await app.close()
   })
 })
+
+describe('GET /laporan/harian — admin instalasi lama (tenantId null) tidak boleh crash', () => {
+  it('tetap 200 tanpa filter tenant saat admin.tenantId null', async () => {
+    const prisma = fullMockPrisma({
+      listOfPayment: { findMany: vi.fn().mockResolvedValue([]) },
+      expense: { findMany: vi.fn().mockResolvedValue([]) },
+    })
+    const app = await buildApp(laporanRoutes, prisma, { ...DEFAULT_AUTH_USER, tenantId: null as any })
+    const res = await app.inject({ method: 'GET', url: '/api/laporan/harian' })
+    expect(res.statusCode).toBe(200)
+    await app.close()
+  })
+})

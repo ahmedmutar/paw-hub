@@ -8,9 +8,9 @@ import { authenticate, requireRole } from '../../middleware/auth'
  * kolom tenantId langsung, cuma relasi lewat branch).
  */
 function payrollBranchFilter(user: any) {
-  return user.role === 'admin'
-    ? { branch: { tenantId: BigInt(user.tenantId) } }
-    : { branchId: BigInt(user.branchId) }
+  if (user.role !== 'admin') return { branchId: BigInt(user.branchId) }
+  // Instalasi lama tanpa tenant (tenantId null) — jangan crash, admin lihat semua cabang.
+  return user.tenantId ? { branch: { tenantId: BigInt(user.tenantId) } } : {}
 }
 
 export async function penggajianRoutes(app: FastifyInstance) {
@@ -158,7 +158,7 @@ export async function penggajianRoutes(app: FastifyInstance) {
 
     if (user.role === 'admin') {
       const targetBranch = await app.prisma.branch.findFirst({
-        where: { id: BigInt(branchId), tenantId: BigInt(user.tenantId) },
+        where: user.tenantId ? { id: BigInt(branchId), tenantId: BigInt(user.tenantId) } : { id: BigInt(branchId) },
       })
       if (!targetBranch) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
     }

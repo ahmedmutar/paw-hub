@@ -84,9 +84,9 @@ function drawCertPDF(opts: {
 // langsung — cuma lewat relasi ke branch. Admin dikunci ke seluruh cabang di
 // tenant-nya, non-admin dikunci ke cabang sendiri.
 function certBranchFilter(user: any) {
-  return user.role === 'admin'
-    ? { branch: { tenantId: BigInt(user.tenantId) } }
-    : { branchId: BigInt(user.branchId) }
+  if (user.role !== 'admin') return { branchId: BigInt(user.branchId) }
+  // Instalasi lama tanpa tenant (tenantId null) — jangan crash, admin lihat semua cabang.
+  return user.tenantId ? { branch: { tenantId: BigInt(user.tenantId) } } : {}
 }
 
 export async function sertifikatRoutes(fastify: FastifyInstance) {

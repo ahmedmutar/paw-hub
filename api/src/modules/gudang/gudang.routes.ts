@@ -10,6 +10,15 @@ function gudangBranchFilter(user: any) {
   return user.tenantId ? { branch: { tenantId: BigInt(user.tenantId) } } : {}
 }
 
+// Dipakai admin saat menitipkan branchId di body (buat kategori/satuan/barang
+// atas nama cabang lain) — pastikan cabang itu benar milik tenant-nya.
+// Instalasi lama tanpa tenant (tenantId null) cuma dicek by id, tidak crash.
+async function verifyBranchInTenant(app: FastifyInstance, user: any, targetBranchId: bigint) {
+  return app.prisma.branch.findFirst({
+    where: user.tenantId ? { id: targetBranchId, tenantId: BigInt(user.tenantId) } : { id: targetBranchId },
+  })
+}
+
 // Barang dianggap "mendekati kadaluwarsa" kalau expiredDate-nya jatuh dalam
 // N hari ke depan — termasuk yang sudah lewat (belum sempat ditarik/dibuang).
 const EXPIRY_WARNING_DAYS = 30
@@ -88,7 +97,7 @@ export async function gudangRoutes(app: FastifyInstance) {
     const targetBranchId = user.role === 'admin' ? BigInt(branchId ?? user.branchId) : BigInt(user.branchId)
 
     if (user.role === 'admin' && branchId) {
-      const targetBranch = await app.prisma.branch.findFirst({ where: { id: targetBranchId, tenantId: BigInt(user.tenantId) } })
+      const targetBranch = await verifyBranchInTenant(app, user, targetBranchId)
       if (!targetBranch) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
     }
 
@@ -160,7 +169,7 @@ export async function gudangRoutes(app: FastifyInstance) {
     const targetBranchId = user.role === 'admin' ? BigInt(branchId ?? user.branchId) : BigInt(user.branchId)
 
     if (user.role === 'admin' && branchId) {
-      const targetBranch = await app.prisma.branch.findFirst({ where: { id: targetBranchId, tenantId: BigInt(user.tenantId) } })
+      const targetBranch = await verifyBranchInTenant(app, user, targetBranchId)
       if (!targetBranch) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
     }
 
@@ -284,7 +293,7 @@ export async function gudangRoutes(app: FastifyInstance) {
     const targetBranchId = user.role === 'admin' ? BigInt(branchId ?? user.branchId) : BigInt(user.branchId)
 
     if (user.role === 'admin' && branchId) {
-      const targetBranch = await app.prisma.branch.findFirst({ where: { id: targetBranchId, tenantId: BigInt(user.tenantId) } })
+      const targetBranch = await verifyBranchInTenant(app, user, targetBranchId)
       if (!targetBranch) return reply.status(404).send({ message: 'Cabang tidak ditemukan.' })
     }
 

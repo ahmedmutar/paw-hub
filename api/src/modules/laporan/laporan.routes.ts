@@ -46,9 +46,9 @@ const PAYMENT_INCLUDE = {
 // Expense tidak punya tenantId langsung — cuma branchId. Admin dikunci ke
 // seluruh cabang di tenant-nya, non-admin dikunci ke cabang sendiri.
 function laporanBranchFilter(user: any) {
-  return user.role === 'admin'
-    ? { branch: { tenantId: BigInt(user.tenantId) } }
-    : { branchId: BigInt(user.branchId) }
+  if (user.role !== 'admin') return { branchId: BigInt(user.branchId) }
+  // Instalasi lama tanpa tenant (tenantId null) — jangan crash, admin lihat semua cabang.
+  return user.tenantId ? { branch: { tenantId: BigInt(user.tenantId) } } : {}
 }
 
 function buildPaymentWhere(branchFilter: any, start: Date, end: Date) {

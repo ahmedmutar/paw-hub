@@ -225,3 +225,34 @@ describe('penggajian.routes — isolasi antar-cabang & antar-tenant (IDOR)', () 
     })
   })
 })
+
+describe('penggajian.routes — admin instalasi lama (tenantId null) tidak boleh crash', () => {
+  it('GET /penggajian tetap 200 tanpa filter tenant', async () => {
+    const { penggajianRoutes } = await import('../../modules/penggajian/penggajian.routes')
+    const prisma = fullMockPrisma({ payroll: { findMany: vi.fn().mockResolvedValue([]) } })
+    const app = await buildApp(penggajianRoutes, prisma, { ...ADMIN_USER, tenantId: null as any })
+    const res = await app.inject({ method: 'GET', url: '/api/penggajian' })
+    expect(res.statusCode).toBe(200)
+    await app.close()
+  })
+
+  it('POST /penggajian dengan branchId tetap berhasil (dicek by id saja)', async () => {
+    const { penggajianRoutes } = await import('../../modules/penggajian/penggajian.routes')
+    const createMock = vi.fn().mockResolvedValue(makePayroll())
+    const prisma = fullMockPrisma({
+      branch: { findFirst: vi.fn().mockResolvedValue({ id: BigInt(999) }) },
+      payroll: { create: createMock },
+    })
+    const app = await buildApp(penggajianRoutes, prisma, { ...ADMIN_USER, tenantId: null as any })
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/penggajian',
+      payload: {
+        userEmployeeId: '2', branchId: '999', datePayed: '2026-01-01',
+        periodMonth: 1, periodYear: 2026, basicSallary: 5000000,
+      },
+    })
+    expect(res.statusCode).toBe(201)
+    await app.close()
+  })
+})
