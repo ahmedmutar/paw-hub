@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { sendWhatsapp, msgVaccinationReminder, msgDewormingReminder } from '../notif/wa.service'
+import { checkPlanFeature } from '../../lib/planLimits'
 
 const PATIENT_INCLUDE = {
   patient: {
@@ -32,6 +33,10 @@ export async function runReminderScan(prisma: PrismaClient, daysAhead = 7): Prom
     const owner = rec.patient?.owner
     if (!owner?.phoneNumber) continue
 
+    const branchData = await prisma.branch.findUnique({ where: { id: rec.patient.branchId } })
+    const featureCheck = await checkPlanFeature({ prisma }, branchData?.tenantId, 'reminder')
+    if (!featureCheck.ok) continue
+
     // Skip jika sudah dikirim untuk record ini
     const existing = await prisma.reminderLog.findUnique({
       where: { type_recordId: { type: 'vaccination', recordId: rec.id } },
@@ -46,7 +51,6 @@ export async function runReminderScan(prisma: PrismaClient, daysAhead = 7): Prom
 
     try {
       const dueDate = rec.nextDueAt!.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-      const branchData = await prisma.branch.findUnique({ where: { id: rec.patient.branchId } })
 
       await sendWhatsapp(prisma, {
         phone:         owner.phoneNumber,
@@ -88,6 +92,10 @@ export async function runReminderScan(prisma: PrismaClient, daysAhead = 7): Prom
     const owner = rec.patient?.owner
     if (!owner?.phoneNumber) continue
 
+    const branchData = await prisma.branch.findUnique({ where: { id: rec.patient.branchId } })
+    const featureCheck = await checkPlanFeature({ prisma }, branchData?.tenantId, 'reminder')
+    if (!featureCheck.ok) continue
+
     const existing = await prisma.reminderLog.findUnique({
       where: { type_recordId: { type: 'deworming', recordId: rec.id } },
     })
@@ -101,7 +109,6 @@ export async function runReminderScan(prisma: PrismaClient, daysAhead = 7): Prom
 
     try {
       const dueDate = rec.nextDueAt!.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-      const branchData = await prisma.branch.findUnique({ where: { id: rec.patient.branchId } })
 
       await sendWhatsapp(prisma, {
         phone:         owner.phoneNumber,

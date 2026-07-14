@@ -1,9 +1,14 @@
-import { FastifyInstance } from 'fastify'
+import { PrismaClient } from '@prisma/client'
 
 export type PlanLimitResource = 'branches' | 'users' | 'patients'
 export type PlanFeature = 'whatsapp' | 'booking' | 'grooming' | 'reminder' | 'portal' | 'priority_support'
 
 type GateResult = { ok: true } | { ok: false; message: string }
+
+// Minimal shape so this is callable both from route handlers (pass the
+// Fastify app, which has .prisma decorated) and from plain services like
+// reminder.service.ts that only hold a bare PrismaClient.
+type PrismaCtx = { prisma: PrismaClient }
 
 const RESOURCE_LABEL: Record<PlanLimitResource, string> = {
   branches: 'cabang',
@@ -11,7 +16,7 @@ const RESOURCE_LABEL: Record<PlanLimitResource, string> = {
   patients: 'pasien',
 }
 
-async function getActivePlan(app: FastifyInstance, tenantId: bigint) {
+async function getActivePlan(app: PrismaCtx, tenantId: bigint) {
   const sub = await app.prisma.tenantSubscription.findUnique({
     where:   { tenantId },
     include: { plan: true },
@@ -25,7 +30,7 @@ async function getActivePlan(app: FastifyInstance, tenantId: bigint) {
  * tidak dibatasi di sini — supaya tidak mengunci instalasi non-SaaS.
  */
 export async function checkPlanLimit(
-  app: FastifyInstance,
+  app: PrismaCtx,
   tenantId: bigint | null | undefined,
   resource: PlanLimitResource,
 ): Promise<GateResult> {
@@ -59,7 +64,7 @@ export async function checkPlanLimit(
  * tanpa langganan aktif tidak dibatasi (lihat catatan di checkPlanLimit).
  */
 export async function checkPlanFeature(
-  app: FastifyInstance,
+  app: PrismaCtx,
   tenantId: bigint | null | undefined,
   feature: PlanFeature,
 ): Promise<GateResult> {
